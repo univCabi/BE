@@ -9,4 +9,4 @@ class LoginView(View):
     
 class LogoutView(View):
     def get(self, request):
-        return HttpResponse('Logout')
+        return HttpResponse('User Logout')
