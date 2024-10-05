@@ -1,25 +1,19 @@
 from django.http import HttpResponse
-from django.views import View
-from user.serializers import TaskSearchSerializer, TaskPostSerializer
 
 from rest_framework.views import APIView
 from drf_yasg.utils       import swagger_auto_schema
 from drf_yasg             import openapi
 
-
-# Create your views here.
-
-class LoginView(APIView):
-    # Query Param EXAMPLE
-    @swagger_auto_schema(tags=['지정한 데이터의 상세 정보를 불러옵니다.'], query_serializer=TaskSearchSerializer, responses={200: 'Success'})
-    def get(self, request):
-        return HttpResponse('User Login')
-    
-    # Request Body EXAMPLE
-    @swagger_auto_schema(tags=['데이터를 생성합니다.'], request_body=TaskPostSerializer)
+class CreateUserView(APIView) :
+    @swagger_auto_schema(tags=['유저를 생성합니다.'], request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'name': openapi.Schema(type=openapi.TYPE_STRING, description='유저 이름'),
+            'affiliation': openapi.Schema(type=openapi.TYPE_STRING, description='소속'),
+            'building': openapi.Schema(type=openapi.TYPE_STRING, description='건물'),
+            'visibility': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='가시성'),
+        }
+    ))
+    # TODO: 학번 hash화
     def post(self, request):
-        return HttpResponse('User Login')
-
-class LogoutView(View):
-    def get(self, request):
-        return HttpResponse('User Logout')
+        return HttpResponse('User Create')
