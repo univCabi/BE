@@ -7,9 +7,12 @@ from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth.hashers import make_password
 
 from drf_yasg.utils       import swagger_auto_schema
 from drf_yasg             import openapi
+from user.models import users
+from authn.models import authns
 
 
 class LoginView(APIView):
@@ -80,3 +83,42 @@ class LogoutView(APIView):
     def post(self, request):
         request.auth.delete()  # Delete the token to log out
         return Response({"message": "Logged out successfully"}, status=204)
+    
+class CreateUserView(APIView):
+    permission_classes = [AllowAny]
+
+    @swagger_auto_schema(tags=['회원가입을 합니다.'], request_body=LoginSerializer)
+    def post(self, request):
+        # Create a new user or update if already exists
+        id, created = users.objects.update_or_create(
+            name="민영재",
+            affiliation="전자정보통신공학부 전자공학전공",
+            building="누리관",
+            visibility=True,
+        )
+
+        print("user : ", id)
+
+        # Create or update the authns entry, ensure password is hashed
+        authns_obj, created = authns.objects.update_or_create(
+            user_id=id,  # Pass the full user instance here
+            student_number='202111741',
+            password=make_password("202111741"),  # Hash the password
+        )
+
+        # Manually set the password and save
+        authns_obj.set_password("202111741")  # Hashes the password
+        authns_obj.save()
+
+        return Response({"message": "User and authns created successfully"}, status=201)
+
+    
+
+class DeleteUserView(APIView):
+    permission_classes = [AllowAny]
+
+    @swagger_auto_schema(tags=['회원탈퇴를 합니다.'], request_body=LoginSerializer)
+    def post(self, request):
+        users.objects.all().delete()
+        authns.objects.all().delete()
+        return Response({"message": "User deleted successfully"}, status=204)

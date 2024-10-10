@@ -8,8 +8,22 @@ virtualenv myenv
 
 ### 가상환경 활성화
 
+#### Windows
+
 ```
-source myenv/bin/activate
+myenv\Scripts\activate
+```
+
+#### Mac
+
+```
+source myenv/Scripts/activate
+```
+
+OR
+
+```
+python3 -m virtualenv myenv
 ```
 
 ### 가상환경 비활성화
