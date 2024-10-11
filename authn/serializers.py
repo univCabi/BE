@@ -12,5 +12,5 @@ from rest_framework import serializers
 #    type 	= serializers.CharField(help_text='type param', required=False)
 
 class LoginSerializer(serializers.Serializer):
-    student_number   = serializers.CharField(help_text='학번')
+    studentNumber   = serializers.CharField(help_text='학번')
     password         = serializers.CharField(help_text='비밀번호')
