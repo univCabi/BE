@@ -28,30 +28,10 @@ class LoginView(APIView):
     @swagger_auto_schema(tags=['로그인을 합니다.'], request_body=LoginSerializer)
     def post(self, request):
 
-        #DB flushall
-        #users.objects.all().delete()
-        #authns.objects.all().delete()
-
-        #users.objects.create(
-        #    name = "민영재",
-        #    affiliation = "전자정보통신공학부 전자공학전공",
-        #    building = "누리관",
-        #    visibility = True,
-        #)
-
-        # 테스트 용 DB 저장
-        #authns.objects.create(
-        #    user_id = userInfo,
-        #    student_number = request.data.get("student_number"),
-        #    password=make_password(request.data.get("password")),  # Hash the password
-        #)
-
         user = request.user
-
-        #print("user : ", user)
-
-        if user is not None:
+        if request.user is not None:
             # Generate JWT tokens (access and refresh)
+            print("user : ", user)
             refresh = CustomLoginJwtToken.get_token(user)
 
             response = HttpResponse('User Login Success')
@@ -97,7 +77,7 @@ class CreateUserView(APIView):
             visibility=True,
         )
 
-        print("user : ", id)
+        #print("user : ", id)
 
         # Create or update the authns entry, ensure password is hashed
         authns_obj, created = authns.objects.update_or_create(
