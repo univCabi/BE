@@ -36,10 +36,13 @@ class LoginView(APIView):
 
             response = HttpResponse('User Login Success')
 
-            response.set_cookie('access_token', str(refresh.access_token))
-            response.set_cookie('refresh_token', str(refresh))
+            response.set_cookie('accessToken', str(refresh.access_token))
+            response.set_cookie('refreshToken', str(refresh))
 
-            return response
+            #return response
+        
+            return Response({ 'accessToken': str(refresh.access_token), 'refreshToken': str(refresh) })
+            
             
             # Return the tokens in the response
             #return Response({
