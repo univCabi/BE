@@ -68,7 +68,7 @@ class IsAdminUser(JWTAuthentication):
         if not user.is_active:
             raise AuthenticationFailed(_("User is inactive"), code="user_inactive")
 
-        if user.role == 'ADMIN':
+        if user.role == 'NORMAL':
             raise AuthenticationFailed(_("User is not an admin"), code="user_not_admin")
 
         return user
