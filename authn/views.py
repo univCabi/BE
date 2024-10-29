@@ -1,4 +1,4 @@
-from authn.authenticate import LoginAuthenticate, IsLoginUser
+from authn.authenticate import LoginAuthenticate, IsLoginUser, IsAdminUser
 from authn.serializers import LoginSerializer
 from .jwt import CustomLoginJwtToken
 from django.http import HttpResponse
@@ -76,7 +76,8 @@ class LogoutView(APIView):
 
     
 class CreateUserView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [IsAdminUser]
 
     @swagger_auto_schema(tags=['회원가입을 합니다.'], request_body=LoginSerializer)
     def post(self, request):
@@ -106,7 +107,8 @@ class CreateUserView(APIView):
     
 
 class DeleteUserView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [IsAdminUser]
 
     @swagger_auto_schema(tags=['회원탈퇴를 합니다.'], request_body=LoginSerializer)
     def post(self, request):
