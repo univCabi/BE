@@ -1,4 +1,4 @@
-from authn.authenticate import LoginAuthenticate
+from authn.authenticate import LoginAuthenticate, IsLoginUser
 from authn.serializers import LoginSerializer
 from .jwt import CustomLoginJwtToken
 from django.http import HttpResponse
@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.contrib.auth.hashers import make_password
 
 from drf_yasg.utils       import swagger_auto_schema
@@ -30,8 +31,7 @@ class LoginView(APIView):
 
         user = request.user
         if request.user is not None:
-            # Generate JWT tokens (access and refresh)
-            print("user : ", user)
+            # GenerFernet.generate_key().decode()ate JWT tokens (access and refresh)
             refresh = CustomLoginJwtToken.get_token(user)
 
             response = HttpResponse('User Login Success')
@@ -61,11 +61,19 @@ class LoginView(APIView):
 
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
+    authentication_classes = [IsLoginUser]  # JWT 인증 클래스 추가
 
     @swagger_auto_schema(tags=['로그아웃을 합니다.'], request_body=LoginSerializer)
     def post(self, request):
-        request.auth.delete()  # Delete the token to log out
-        return Response({"message": "Logged out successfully"}, status=204)
+        response = Response({"message": "Logged out successfully"}, status=205)
+        
+        # 쿠키에서 토큰을 삭제하기 위해 빈 값을 설정하고, 즉시 만료
+        response.delete_cookie('accessToken')
+        response.delete_cookie('refreshToken')
+
+        return response
+        
+
     
 class CreateUserView(APIView):
     permission_classes = [AllowAny]

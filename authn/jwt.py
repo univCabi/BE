@@ -1,5 +1,6 @@
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from django.contrib.auth.hashers import make_password
+#from django.contrib.auth.hashers import make_password
+from .utils import encrypt_student_number
 
 # student_number를 hash 시켜서 담습니다
 class CustomLoginJwtToken(TokenObtainPairSerializer):
@@ -9,10 +10,10 @@ class CustomLoginJwtToken(TokenObtainPairSerializer):
         token = super().get_token(user)
 
         # Customize the token payload to include student_number instead of user_id
-        token['student_number'] = make_password(user.student_number)
 
+        print('token:', token)
         # Optionally, remove user_id if you don't want it
-        if 'user_id' in token:
-            del token['user_id']
-
+        if 'student_number' in token:
+            token['student_number'] = encrypt_student_number(user.student_number)
+            
         return token
