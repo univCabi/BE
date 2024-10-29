@@ -1,4 +1,6 @@
 asgiref==3.8.1
+cffi==1.17.1
+cryptography==43.0.3
 Django==5.1.1
 django-cors-headers==4.4.0
 django-environ==0.11.2
@@ -7,6 +9,7 @@ djangorestframework-simplejwt==5.3.1
 drf-yasg==1.21.7
 inflection==0.5.1
 packaging==24.1
+pycparser==2.22
 PyJWT==2.9.0
 pytz==2024.2
 PyYAML==6.0.2
