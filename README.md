@@ -17,7 +17,7 @@ myenv\Scripts\activate
 #### Mac
 
 ```
-source myenv/Scripts/activate
+source myenv/bin/activate
 ```
 
 OR
