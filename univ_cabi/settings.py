@@ -126,6 +126,11 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+SIMPLE_JWT = {
+    'USER_ID_FIELD': 'student_number',  # Unique field in the custom user model (e.g., username)
+    'USER_ID_CLAIM': 'student_number',  # JWT token will contain this claim
+}
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',

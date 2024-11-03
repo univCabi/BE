@@ -1,6 +1,12 @@
 from django.db import models
+from enum import Enum
 from user.models import users
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
+
+class RoleEnum(Enum):
+    NORMAL = 'NORMAL'
+    ADMIN = 'ADMIN'
+
 
 """ 
 authns model
@@ -26,6 +32,7 @@ class authns(AbstractBaseUser):
     user_id = models.OneToOneField(users, on_delete=models.CASCADE, related_name='auth_info')
     student_number = models.CharField(max_length=50)
     password = models.CharField(max_length=255)
+    role = models.CharField(max_length=50, choices=[(tag, tag.value) for tag in RoleEnum], default='NORMAL')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
