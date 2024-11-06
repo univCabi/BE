@@ -76,8 +76,8 @@ class LogoutView(APIView):
 
     
 class CreateUserView(APIView):
-    permission_classes = [IsAuthenticated]
-    authentication_classes = [IsAdminUser]
+    permission_classes = [AllowAny]
+    #authentication_classes = []
 
     @swagger_auto_schema(tags=['회원가입을 합니다.'], request_body=LoginSerializer)
     def post(self, request):
@@ -86,7 +86,7 @@ class CreateUserView(APIView):
             name="민영재",
             affiliation="전자정보통신공학부 전자공학전공",
             building="누리관",
-            visibility=True,
+            is_visible=True,
         )
 
         #print("user : ", id)
@@ -107,8 +107,8 @@ class CreateUserView(APIView):
     
 
 class DeleteUserView(APIView):
-    permission_classes = [IsAuthenticated]
-    authentication_classes = [IsAdminUser]
+    permission_classes = [AllowAny]
+    #authentication_classes = []
 
     @swagger_auto_schema(tags=['회원탈퇴를 합니다.'], request_body=LoginSerializer)
     def post(self, request):
