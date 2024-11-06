@@ -24,6 +24,7 @@ class BuildingNameEnum(Enum):
 class CabinetStatusEnum(Enum):
     BROKEN = 'BROKEN'
     AVAILABLE = 'AVAILABLE'
+    USING = 'USING'
     OVERDUE = 'OVERDUE'
 
 class CabinetPayableEnum(Enum):

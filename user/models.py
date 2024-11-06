@@ -10,7 +10,7 @@ class users(models.Model):
     affiliation = models.CharField(max_length=50)
     phoneNumber = models.CharField(max_length=20)
     building = models.CharField(max_length=50)
-    is_visuable = models.BooleanField(default=True)
+    is_visible = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     deleted_at = models.DateTimeField(null=True, blank=True)

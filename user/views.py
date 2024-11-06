@@ -11,7 +11,7 @@ class CreateUserView(APIView) :
             'name': openapi.Schema(type=openapi.TYPE_STRING, description='유저 이름'),
             'affiliation': openapi.Schema(type=openapi.TYPE_STRING, description='소속'),
             'building': openapi.Schema(type=openapi.TYPE_STRING, description='건물'),
-            'visibility': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='가시성'),
+            'is_visible': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='가시성'),
         }
     ))
     # TODO: 학번 hash화
