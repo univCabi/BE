@@ -16,4 +16,9 @@ class users(models.Model):
     deleted_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
-        return self.name
+        return self.id
+
+    @classmethod
+    def find_one_userinfo_by_id(cls, id):
+        return cls.objects.get(id=id)
+    
