@@ -1,6 +1,5 @@
-from django.http import HttpResponse
 from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 
@@ -8,6 +7,8 @@ from .serializers import requestFindAllCabinetInfoByBuildingNameAndFloor, lentCa
 from .models import cabinets, buildings, cabinet_positions
 
 from drf_yasg.utils import swagger_auto_schema
+
+
 
 # Create your views here.
 
@@ -68,17 +69,20 @@ class CabinetMainView(APIView):
 
         return Response(data, status=status.HTTP_200_OK)
         
-    
+#최대 6개    
 class CabinetSearchView(APIView):
 
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         return Response({'result': request.GET.get('keyword')})
     
-class CabinetLentView(APIView):
 
-    permission_classes = [AllowAny]
+# 당장은 모두 받기
+# 나중에 무한 스크롤
+class CabinetRentView(APIView):
+
+    permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(tags=['사물함을 대여합니다.'], request_body=lentCabinetByUserIdAndCabinetId)
     def post(self, request):
@@ -93,6 +97,19 @@ class CabinetLentView(APIView):
 
 class CabinetReturnView(APIView):
 
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     def post(self, request):
+        return Response.status(status.HTTP_200_OK)
+
+class CabinetSearchView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response.status(status.HTTP_200_OK)
+
+class CabinetSearchDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
         return Response.status(status.HTTP_200_OK)
