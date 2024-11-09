@@ -127,4 +127,10 @@ class ProfileMeView(APIView) :
     
     #@swagger_auto_schema(tags=['내 프로필을 수정합니다.'], request_body=openapi.Schema())
     def post(self, request):
-        return HttpResponse('Update Profile Me')
+
+        isVisible = request.data['isVisible']
+
+        if isVisible == True:
+            return HttpResponse('Update Visible True')
+        else:
+            return HttpResponse('Update Visible False')
