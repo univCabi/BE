@@ -73,8 +73,8 @@ class LogoutView(APIView):
 
         return response
         
+from cabinet.models import cabinets, cabinet_histories, cabinet_positions
 
-    
 class CreateUserView(APIView):
     permission_classes = [AllowAny]
     #authentication_classes = []
@@ -117,6 +117,26 @@ class CreateUserView(APIView):
         authns_obj.save()
 
 
+        cabinet_id = cabinets.objects.create(
+            user_id=id,
+            building_id=building_info,
+            cabinet_number=1,
+            status='USING',
+            payable='FREE'
+        )
+        
+        cabinet_histories.objects.create(
+            user_id=id,
+            cabinet_id=cabinet_id,
+            expired_at='2021-12-31 23:59:59'
+        )
+
+        cabinet_positions.objects.create(
+            cabinet_id=cabinet_id,
+            cabinet_x_pos=1,
+            cabinet_y_pos=1
+        )
+
 
 
         return Response({"message": "User and authns created successfully"}, status=201)
@@ -131,4 +151,8 @@ class DeleteUserView(APIView):
     def post(self, request):
         users.objects.all().delete()
         authns.objects.all().delete()
+        buildings.objects.all().delete()
+        cabinets.objects.all().delete()
+        cabinet_histories.objects.all().delete()
+        cabinet_positions.objects.all().delete()
         return Response({"message": "User deleted successfully"}, status=204)
