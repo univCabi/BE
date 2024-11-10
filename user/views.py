@@ -3,7 +3,7 @@ from rest_framework.views import APIView
 from drf_yasg.utils       import swagger_auto_schema
 from drf_yasg             import openapi
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from authn.authenticate import IsLoginUser
+from authn.authentication import IsLoginUser
 
 from user.dto import GetProfileMeDto, UpdateProfileMeDto
 from .models import users

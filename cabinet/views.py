@@ -1,6 +1,8 @@
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from authn.authentication import IsLoginUser
+from drf_yasg import openapi
+
 from rest_framework.response import Response
 from rest_framework import status
 
@@ -11,6 +13,9 @@ from authn.models import authns
 from user.models import users
 
 from drf_yasg.utils import swagger_auto_schema
+
+from .serializers import CabinetLogDto
+
 
 
 
@@ -482,3 +487,47 @@ class CabinetTestView(APIView):
         )
 
         return Response({"message": "cabinet created successfully"},status=status.HTTP_200_OK)
+
+
+class CabinetLogView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = [IsLoginUser]
+
+    @swagger_auto_schema(
+        tags=['사물함 이력 조회'],
+        request_body=None,
+        responses={
+            200: openapi.Response(
+                description="성공적으로 조회되었습니다.",
+                schema=CabinetLogDto(many=True)  # Ensure CabinetLogDto is a serializer
+            ),
+            401: openapi.Response(
+                description="로그인 페이지로 이동",
+                schema=openapi.Schema(type=openapi.TYPE_STRING)
+            ),
+            500: openapi.Response(
+                description="컴포넌트들에 서버 통신 에러 문구 출력",
+                schema=openapi.Schema(type=openapi.TYPE_STRING)
+            ),
+        }
+    )
+    def get(self, request):
+        try:
+            # Get the current user's student number
+            student_number = request.user.student_number
+
+            # Retrieve the user by student number
+            user = users.find_one_userinfo_by_student_number(student_number=student_number)
+
+            # Retrieve all cabinet history records associated with this user
+            cabinet_history_infos = cabinet_histories.objects.filter(user_id=user.id)
+
+            # Serialize the queryset with many=True
+            cabinet_log_serializer = CabinetLogDto(cabinet_history_infos, many=True)
+
+            return Response(cabinet_log_serializer.data, status=status.HTTP_200_OK)
+        
+        except users.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -33,6 +33,8 @@ class cabinets(models.Model):
         return str(self.building_id)
     
 
+    
+
 class cabinet_histories(models.Model):
     id = models.AutoField(primary_key=True)
     user_id = models.OneToOneField(users, on_delete=models.CASCADE, null=True)
@@ -44,6 +46,10 @@ class cabinet_histories(models.Model):
 
     def __str__(self):
         return str(self.cabinet_id)
+    
+    @classmethod
+    def find_all_cabinet_by_user_id(cls, user_id):
+        return cls.objects.filter(user_id=user_id)
     
 class cabinet_positions(models.Model) :
     cabinet_id = models.OneToOneField(cabinets, on_delete=models.CASCADE)
