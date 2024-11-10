@@ -15,25 +15,27 @@ class CamelCaseSerializer(serializers.Serializer):
         data = super().to_representation(instance)
         return {self.to_camel_case(key): value for key, value in data.items()}
 
-class RentCabinetInfoDto(serializers.Serializer):
-    building = serializers.CharField(source='building_id.name', help_text='건물')
-    floor = serializers.CharField(source='building_id.floor', help_text='층')
-    cabinetNumber = serializers.IntegerField(source='cabinet_number', help_text='캐비넷 번호')
-    status = serializers.CharField(help_text='상태')
-    startDate = serializers.DateTimeField(source='cabinet_histories.created_at', help_text='사용 시작일')
-    endDate = serializers.DateTimeField(source='cabinet_histories.expired_at', help_text='사용 종료일')
-    leftDate = serializers.SerializerMethodField(help_text='남은 일수')
+#class RentCabinetInfoDto(serializers.Serializer):
+#    building = serializers.CharField(source='building_id.name', help_text='건물')
+#    floor = serializers.CharField(source='building_id.floor', help_text='층')
+#    cabinetNumber = serializers.IntegerField(source='cabinet_number', help_text='캐비넷 번호')
+#    status = serializers.CharField(help_text='상태')
+#    startDate = serializers.DateTimeField(source='cabinet_histories.created_at', help_text='사용 시작일')
+#    endDate = serializers.DateTimeField(source='cabinet_histories.expired_at', help_text='사용 종료일')
+#    leftDate = serializers.SerializerMethodField(help_text='남은 일수')
 
-    def get_leftDate(self, obj):
-        try:
-            expired_at = obj.cabinet_histories.expired_at
-            current_time = datetime.now()
-            left_date = (expired_at - current_time).days
-            return left_date
-        except Exception:
-            return 0
+#    def get_leftDate(self, obj):
+#        try:
+#            expired_at = obj.cabinet_histories.expired_at
+#            current_time = datetime.now()
+#            left_date = (expired_at - current_time).days
+#            return left_date
+#        except Exception:
+#            return 0
 
-class GetProfileMeDto(serializers.ModelSerializer):
+class GetProfileMeDto(CamelCaseSerializer):
+    name = serializers.CharField(help_text='이름')
+    affiliation = serializers.CharField(help_text='소속')
     isVisible = serializers.BooleanField(source='is_visible', help_text='이름 공개 여부')
     studentNumber = serializers.SerializerMethodField(help_text='학번')
     phoneNumber = serializers.CharField(source='phone_number', help_text='전화번호')

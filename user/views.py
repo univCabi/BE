@@ -1,29 +1,17 @@
 from django.http import HttpResponse
-
 from rest_framework.views import APIView
 from drf_yasg.utils       import swagger_auto_schema
 from drf_yasg             import openapi
-
-from user.serializers import GetProfileMeSerializer, UpdateProfileMeSerializer, BuildingAllInfoSerializer
-from user.dto import GetProfileMeDto, UpdateProfileMeDto
-
-
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from authn.authenticate import IsLoginUser
 
-from .models import users, buildings
-
+from user.dto import GetProfileMeDto, UpdateProfileMeDto
+from .models import users
 from authn.models import authns
 
-from cabinet.models import cabinets, cabinet_histories
 
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import UserProfileInfoSerializer
-
-from cabinet.serializers import CabinetAllInfoSerializer, CabinetHistoryAllInfoSerializer
-from datetime import datetime
-
 
 class CreateUserView(APIView) :
     @swagger_auto_schema(tags=['유저를 생성합니다.'], request_body=openapi.Schema(
@@ -134,7 +122,36 @@ class ProfileMeView(APIView):
 #            return Response({'error': 'Internal Server Error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
 
-    @swagger_auto_schema(tags=['회원 프로필 조회'], request_body=None)
+    @swagger_auto_schema(
+        tags=['회원 프로필 조회'],
+        request_body=None,
+        responses={
+            200: openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'name': openapi.Schema(type=openapi.TYPE_STRING, description='이름'),
+                    'isVisible': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='이름 공개 여부'),
+                    'affiliation': openapi.Schema(type=openapi.TYPE_STRING, description='소속'),
+                    'studentNumber': openapi.Schema(type=openapi.TYPE_STRING, description='학번'),
+                    'phoneNumber': openapi.Schema(type=openapi.TYPE_STRING, description='전화번호'),
+                    'rentCabinetInfo': openapi.Schema(
+                        type=openapi.TYPE_OBJECT,
+                        properties={
+                            'building': openapi.Schema(type=openapi.TYPE_STRING, description='건물 이름'),
+                            'floor': openapi.Schema(type=openapi.TYPE_INTEGER, description='층'),
+                            'cabinetNumber': openapi.Schema(type=openapi.TYPE_INTEGER, description='캐비넷 번호'),
+                            'status': openapi.Schema(type=openapi.TYPE_STRING, description='캐비넷 상태'),
+                            'startDate': openapi.Schema(type=openapi.FORMAT_DATETIME, description='사용 시작일'),
+                            'endDate': openapi.Schema(type=openapi.FORMAT_DATETIME, description='사용 종료일'),
+                            'leftDate': openapi.Schema(type=openapi.TYPE_INTEGER, description='남은 일수'),
+                        }
+                    ),
+                }
+            ),
+            401: "로그인 페이지로 이동",
+            500: "컴포넌트들에 서버 통신 에러 문구 출력"
+        }
+    )
     def get(self, request):
         try:
             # Get the currently logged-in user's student number
