@@ -130,3 +130,323 @@ class CabinetSearchDetailView(APIView):
         ]
 
         return Response(cabinetSearchResult, status=status.HTTP_200_OK)
+    
+
+class CabinetFloorView(APIView) :
+    permission_classes = [AllowAny]
+    def get(self, request):
+        building_name = request.GET.get('building')
+        floor = request.GET.get('floor')
+
+
+        floorInfo = {
+                "request_building": building_name,
+                "requet_floor": floor,
+                "floor": 1,
+                "floorWidth": 500,
+                "floorHeight": 1000,
+                "cabinets": [
+                    {
+                        "cabinetNumber": 1,
+                        "xPos": 0,
+                        "yPos": 1000,
+                        "status": "AVAILABLE",
+                    },
+                    {
+                        "cabinetNumber": 2,
+                        "xPos": 0,
+                        "yPos": 900,
+                        "status": "AVAILABLE",
+                    },
+                    {
+                        "cabinetNumber": 3,
+                        "xPos": 0,
+                        "yPos": 800,
+                        "status": "AVAILABLE",
+                    },
+                    {
+                        "cabinetNumber": 4,
+                        "xPos": 0,
+                        "yPos": 700,
+                        "status": "AVAILABLE",
+                    },
+                    {
+                        "cabinetNumber": 5,
+                        "xPos": 0,
+                        "yPos": 600,
+                        "status": "AVAILABLE",
+                    },
+                    {
+                        "cabinetNumber": 6,
+                        "xPos": 0,
+                        "yPos": 500,
+                        "status": "AVAILABLE",
+                    },
+                    {
+                        "cabinetNumber": 7,
+                        "xPos": 0,
+                        "yPos": 400,
+                        "status": "AVAILABLE",
+                    },
+                    {
+                        "cabinetNumber": 8,
+                        "xPos": 0,
+                        "yPos": 300,
+                        "status": "AVAILABLE",
+                    },
+                    {
+                        "cabinetNumber": 9,
+                        "xPos": 0,
+                        "yPos": 200,
+                        "status": "AVAILABLE",
+                    },
+                    {
+                        "cabinetNumber": 10,
+                        "xPos": 0,
+                        "yPos": 100,
+                        "status": "AVAILABLE",
+                    },
+                    {
+                        "cabinetNumber": 11,
+                        "xPos": 100,
+                        "yPos": 1000,
+                        "status": "AVAILABLE",
+                    },
+                    {
+                        "cabinetNumber": 12,
+                        "xPos": 100,
+                        "yPos": 900,
+                        "status": "AVAILABLE",
+                    },
+                    {
+                        "cabinetNumber": 13,
+                        "xPos": 100,
+                        "yPos": 800,
+                        "status": "AVAILABLE",
+                    },
+                    {
+                        "cabinetNumber": 14,
+                        "xPos": 100,
+                        "yPos": 700,
+                        "status": "AVAILABLE",
+                    },
+                    {
+                        "cabinetNumber": 15,
+                        "xPos": 100,
+                        "yPos": 600,
+                        "status": "AVAILABLE",
+                    },
+                    {
+                        "cabinetNumber": 16,
+                        "xPos": 100,
+                        "yPos": 500,
+                        "status": "AVAILABLE",
+                    },
+                    {
+                        "cabinetNumber": 17,
+                        "xPos": 100,
+                        "yPos": 400,
+                        "status": "AVAILABLE",
+                    },
+                    {
+                        "cabinetNumber": 18,
+                        "xPos": 100,
+                        "yPos": 300,
+                        "status": "AVAILABLE",
+                    },
+                    {
+                        "cabinetNumber": 19,
+                        "xPos": 100,
+                        "yPos": 200,
+                        "status": "AVAILABLE",
+                    },
+                    {
+                        "cabinetNumber": 20,
+                        "xPos": 100,
+                        "yPos": 100,
+                        "status": "AVAILABLE",
+                    },
+                    {
+                        "cabinetNumber": 21,
+                        "xPos": 200,
+                        "yPos": 1000,
+                        "status": "AVAILABLE",
+                    },
+                    {
+                        "cabinetNumber": 22,
+                        "xPos": 200,
+                        "yPos": 900,
+                        "status": "AVAILABLE",
+                    },
+                    {
+                        "cabinetNumber": 23,
+                        "xPos": 200,
+                        "yPos": 800,
+                        "status": "AVAILABLE",
+                    },
+                    {
+                        "cabinetNumber": 24,
+                        "xPos": 200,
+                        "yPos": 700,
+                        "status": "AVAILABLE",
+                    },
+                    {
+                        "cabinetNumber" : 25,
+                        "xPos": 200,
+                        "yPos": 600,
+                        "status": "BROKEN",
+                    },
+                    {
+                        "cabinetNumber": 26,
+                        "xPos": 200,
+                        "yPos": 500,
+                        "status": "USING",
+                    },
+                    {
+                        "cabinetNumber": 27,
+                        "xPos": 200,
+                        "yPos": 400,
+                        "status": "USING",
+                    },
+                    {
+                        "cabinetNumber": 28,
+                        "xPos": 200,
+                        "yPos": 300,
+                        "status": "USING",
+                    },
+                    {
+                        "cabinetNumber": 29,
+                        "xPos": 200,
+                        "yPos": 200,
+                        "status": "USING",
+                    },
+                    {
+                        "cabinetNumber": 30,
+                        "xPos": 200,
+                        "yPos": 100,
+                        "status": "BROKEN",
+                    },
+                    {
+                        "cabinetNumber": 31,
+                        "xPos": 300,
+                        "yPos": 1000,
+                        "status": "USING",
+                    },
+                    {
+                        "cabinetNumber": 32,
+                        "xPos": 300,
+                        "yPos": 900,
+                        "status": "USING",
+                    },
+                    {
+                        "cabinetNumber": 33,
+                        "xPos": 300,
+                        "yPos": 800,
+                        "status": "OVERDUE",
+                    },
+                    {
+                        "cabinetNumber": 34,
+                        "xPos": 300,
+                        "yPos": 700,
+                        "status": "USING",
+                    },
+                    {
+                        "cabinetNumber": 35,
+                        "xPos": 300,
+                        "yPos": 600,
+                        "status": "OVERDUE",
+                    },
+                    {
+                        "cabinetNumber": 36,
+                        "xPos": 300,
+                        "yPos": 500,
+                        "status": "USING",
+                    },
+                    {
+                        "cabinetNumber": 37,
+                        "xPos": 300,
+                        "yPos": 400,
+                        "status": "AVAILABLE",
+                    },
+                    {
+                        "cabinetNumber": 38,
+                        "xPos": 300,
+                        "yPos": 300,
+                        "status": "USING",
+                    },
+                    {
+                        "cabinetNumber": 39,
+                        "xPos": 300,
+                        "yPos": 200,
+                        "status": "USING",
+                    },
+                    {
+                        "cabinetNumber": 40,
+                        "xPos": 300,
+                        "yPos": 100,
+                        "status": "USING",
+                    },
+                    {
+                        "cabinetNumber": 41,
+                        "xPos": 400,
+                        "yPos": 1000,
+                        "status": "USING",
+                    },
+                    {
+                        "cabinetNumber": 42,
+                        "xPos": 400,
+                        "yPos": 900,
+                        "status": "USING",
+                    },
+                    {
+                        "cabinetNumber": 43,
+                        "xPos": 400,
+                        "yPos": 800,
+                        "status": "USING",
+                    },
+                    {
+                        "cabinetNumber": 44,
+                        "xPos": 400,
+                        "yPos": 700,
+                        "status": "USING",
+                    },
+                    {
+                        "cabinetNumber": 45,
+                        "xPos": 400,
+                        "yPos": 600,
+                        "status": "USING",
+                    },
+                    {
+                        "cabinetNumber": 46,
+                        "xPos": 400,
+                        "yPos": 500,
+                        "status": "USING",
+                    },
+                    {
+                        "cabinetNumber": 47,
+                        "xPos": 400,
+                        "yPos": 400,
+                        "status": "USING",
+                    },
+                    {
+                        "cabinetNumber": 48,
+                        "xPos": 400,
+                        "yPos": 300,
+                        "status": "USING",
+                    },
+                    {
+                        "cabinetNumber": 49,
+                        "xPos": 400,
+                        "yPos": 200,
+                        "status": "USING",
+                    },
+                    {
+                        "cabinetNumber": 50,
+                        "xPos": 400,
+                        "yPos": 100,
+                        "status": "USING",
+                    }
+                ]
+            }
+
+        return Response(floorInfo, status=status.HTTP_200_OK)
