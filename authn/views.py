@@ -133,8 +133,8 @@ class CreateUserView(APIView):
 
         cabinet_positions.objects.create(
             cabinet_id=cabinet_id,
-            cabinet_x_pos=1,
-            cabinet_y_pos=1
+            cabinet_x_pos=0,
+            cabinet_y_pos=1000
         )
 
 
