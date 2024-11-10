@@ -26,11 +26,11 @@ class AuthnsManager(BaseUserManager):
         extra_fields.setdefault('is_staff', True)
         
         return self.create_user(email, password, **extra_fields)
-    
+
 
 class authns(AbstractBaseUser):
-    user_id = models.OneToOneField(users, on_delete=models.CASCADE, related_name='user_info')
-    student_number = models.CharField(max_length=50)
+    user_id = models.OneToOneField(users, on_delete=models.CASCADE, related_name='authn_info')
+    student_number = models.CharField(max_length=50, unique=True)
     password = models.CharField(max_length=255)
     role = models.CharField(max_length=50, choices=[(tag, tag.value) for tag in RoleEnum], default='NORMAL')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -50,4 +50,4 @@ class authns(AbstractBaseUser):
     @classmethod
     def get_by_student_number(cls, student_number):
         auth_instance = cls.objects.get(student_number=student_number)
-        return auth_instance.id  # Return the related user_id
+        return auth_instance.user_id  # Return the related user_id

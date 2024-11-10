@@ -17,15 +17,15 @@ class LoginAuthenticate(authentication.BaseAuthentication):
             return None
 
         try:
-            auth_info = authns.objects.get(student_number=student_number)
+            authn_info = authns.objects.get(student_number=student_number)
         except authns.DoesNotExist:
             raise exceptions.AuthenticationFailed('No such user')
 
         # Verify the password using Django's check_password function
-        if not check_password(password, auth_info.password):
+        if not check_password(password, authn_info.password):
             raise exceptions.AuthenticationFailed('Incorrect password')
 
-        return (auth_info, None)
+        return (authn_info, None)
     
 class IsLoginUser(JWTAuthentication):
     def get_user(self, validated_token):
