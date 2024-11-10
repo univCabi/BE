@@ -26,11 +26,22 @@ class LoginView(APIView):
     authentication_classes = [LoginAuthenticate]
 
     # Request Body EXAMPLE
-    @swagger_auto_schema(tags=['로그인을 합니다.'], request_body=LoginSerializer, responses={
-        200: {"accessToken": openapi.Schema(type=openapi.TYPE_STRING, description='Access Token'), 
-              "refreshToken": openapi.Schema(type=openapi.TYPE_STRING, description='Refresh Token')},
-              400: {"error": openapi.Schema(type=openapi.TYPE_STRING, description='Invalid Credentials')}
-    })
+    @swagger_auto_schema(    
+        tags=['회원 로그인 기능'], 
+        request_body=LoginSerializer, 
+        responses={
+            200: openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'accessToken': openapi.Schema(type=openapi.TYPE_STRING, description='Access Token'),
+                    'refreshToken': openapi.Schema(type=openapi.TYPE_STRING, description='Refresh Token')
+                }
+            ),
+            400: "로그인 실패",
+            404: "유저 정보가 없습니다.",
+            500: "서버 통신 에러 문구 출력"
+        }
+    )
     def post(self, request):
         user = request.user
         if request.user is not None:
@@ -49,7 +60,15 @@ class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
     authentication_classes = [IsLoginUser]  # JWT 인증 클래스 추가
 
-    @swagger_auto_schema(tags=['로그아웃을 합니다.'], request_body=LoginSerializer)
+    @swagger_auto_schema(
+        tags=['회원 로그아웃 기능'], 
+        request_body=None,
+        responses={
+            200: "로그아웃 성공",
+            401: "로그인 페이지로 이동",
+            500: "로그인 페이지로 이동"
+        }
+    )
     def post(self, request):
         response = Response({"message": "Logged out successfully"}, status=205)
         
@@ -65,7 +84,7 @@ class CreateUserView(APIView):
     permission_classes = [AllowAny]
     #authentication_classes = []
 
-    @swagger_auto_schema(tags=['회원가입을 합니다.'], request_body=LoginSerializer)
+    #@swagger_auto_schema(tags=['회원가입을 합니다.'], request_body=LoginSerializer)
     def post(self, request):
         # Create a new user or update if already exists
 
@@ -125,7 +144,7 @@ class CreateUserView(APIView):
 
 
 
-        return Response({"message": "User and authns created successfully"}, status=201)
+        return Response({"message": "User and authns created successfully"}, status=200)
 
 
 
@@ -133,7 +152,7 @@ class DeleteUserView(APIView):
     permission_classes = [AllowAny]
     #authentication_classes = []
 
-    @swagger_auto_schema(tags=['회원탈퇴를 합니다.'], request_body=LoginSerializer)
+    #@swagger_auto_schema(tags=['회원탈퇴를 합니다.'], request_body=LoginSerializer)
     def post(self, request):
         users.objects.all().delete()
         authns.objects.all().delete()
