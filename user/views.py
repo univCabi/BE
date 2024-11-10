@@ -4,7 +4,9 @@ from rest_framework.views import APIView
 from drf_yasg.utils       import swagger_auto_schema
 from drf_yasg             import openapi
 
-from user.serializers import GetProfileMe, UpdateProfileMe
+from user.serializers import GetProfileMeSerializer, UpdateProfileMeSerializer
+from user.dto import GetProfileMeDto, UpdateProfileMeDto
+
 
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from authn.authenticate import IsLoginUser
@@ -17,6 +19,9 @@ from cabinet.models import cabinets
 
 from rest_framework.response import Response
 from rest_framework import status
+from .serializers import UserAllInfoSerializer
+
+from cabinet.serializers import CabinetAllInfoSerializer
 
 class CreateUserView(APIView) :
     @swagger_auto_schema(tags=['유저를 생성합니다.'], request_body=openapi.Schema(
@@ -61,39 +66,77 @@ class ProfileMeView(APIView) :
     #))
     def get(self, request):
         #try:
-            #student_number = request.user
+            student_number = request.user
 
-            #user_id = authns.get_by_student_number(student_number)
+            user_id = authns.get_by_student_number(student_number)
 
-            #print("USER ID", user_id)
+            print("USER ID", user_id)
 
-            #user_info = users.find_one_userinfo_by_id(id=str(user_id))
+            print("User ID Type", type(user_id))
+
+            #user_info = users.find_one_userinfo_by_id(id=user_id)
+            # 특정 id로 데이터 조회
+            user_info = users.objects.get(id=user_id)
             
-            #print("USER", user_info)
+            print("USER", user_info)
+            # 데이터를 직렬화
+            userInfoSerializer = UserAllInfoSerializer(user_info)
+            user_data = userInfoSerializer.data
 
-            #GetProfileMe_serializer = GetProfileMe(user_info)
+            print("USER DATA", user_data)
 
-            #print("GET", GetProfileMe_serializer.data)
+                # cabinet 정보 조회 및 직렬화
+            #try:
+            cabinet_info = cabinets.objects.get(user_id=user_id)
+            print("CABINET INFO", cabinet_info)
+            cabinet_info_serializer = CabinetAllInfoSerializer(cabinet_info)
+            cabinet_data = cabinet_info_serializer.data
+            print("CABINET DATA", cabinet_data)
+            #except cabinets.DoesNotExist:
+            #    cabinet_data = None  # 또는 {'message': 'No cabinet found for this user'}
 
-            user_profile_me_info = {
-            'name': '민영재',
-            'isVisible': True,
-            'affiliation': '나노융합공학전공',
-            'studentNumber': 202111741,
-            'phoneNumber': '010-1234-5678',
-            'RentCabinetInfo': {
-                'building': '공학관',
-                'floor': 13,
-                'cabinetNumber': 42,
-                'status': 'USING',
-                'startDate': '2024-09-01',
-                'endDate': '2024-12-31',
-                'leftDate': 42,
+            
+            
+
+            # 응답 데이터 구성
+            profile_data = {
+                'name': user_data['name'],
+                'isVisible': user_data['is_visible'],
+                'affiliation': user_data['affiliation'],
+                'studentNumber': student_number,
+                'phoneNumber': user_data['phone_number'],
+                'RentCabinetInfo': {
+                    'building': cabinet_data['building'],
+                    
                 }
             }
 
+            # 응답 직렬화 및 반환
+            profile_serializer = GetProfileMeDto(profile_data)
+            return Response(profile_serializer.data, status=status.HTTP_200_OK)
+        
+            #except users.DoesNotExist:
+            #    return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
         # Return mock data as a response
             return Response(user_profile_me_info, status=status.HTTP_200_OK)
+    
+            #user_profile_me_info = {
+            #'name': '민영재',
+            #'isVisible': True,
+            #'affiliation': '나노융합공학전공',
+            #'studentNumber': 202111741,
+            #'phoneNumber': '010-1234-5678',
+            #'RentCabinetInfo': {
+            #    'building': '공학관',
+            #    'floor': 13,
+            #    'cabinetNumber': 42,
+            #    'status': 'USING',
+            #    'startDate': '2024-09-01',
+            #    'endDate': '2024-12-31',
+            #    'leftDate': 42,
+            #    }
+            #}
+
 
 
 

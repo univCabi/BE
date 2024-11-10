@@ -1,5 +1,5 @@
 from rest_framework import serializers
-
+from .models import cabinets
 
 
 class requestFindAllCabinetInfoByBuildingNameAndFloor(serializers.Serializer):
@@ -44,3 +44,8 @@ class floorInfoSerializer(serializers.ListSerializer):
 class responseFindAllCabinetInfoByBuildingNameAndFloor(serializers.Serializer):
     cabinetInfo = cabinetInfoSerializer(help_text="사물함 정보")
     floorInfo = floorInfoSerializer(many=True, help_text="층별 사물함 리스트")
+
+class CabinetAllInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = cabinets
+        fields = '__all__'  # 모든 필드를 직렬화

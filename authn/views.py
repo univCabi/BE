@@ -12,7 +12,7 @@ from django.contrib.auth.hashers import make_password
 
 from drf_yasg.utils       import swagger_auto_schema
 from drf_yasg             import openapi
-from user.models import users
+from user.models import users, buildings
 from authn.models import authns
 
 
@@ -82,10 +82,15 @@ class CreateUserView(APIView):
     @swagger_auto_schema(tags=['회원가입을 합니다.'], request_body=LoginSerializer)
     def post(self, request):
         # Create a new user or update if already exists
+
+        building_info = buildings.objects.get(id=1)
+        
+        print("building_info : ", building_info)
         id, created = users.objects.update_or_create(
             name="민영재",
             affiliation="전자정보통신공학부 전자공학전공",
-            building="누리관",
+            building_id=building_info,
+            phone_number="010-1234-5678",
             is_visible=True,
         )
 
@@ -96,11 +101,15 @@ class CreateUserView(APIView):
             user_id=id,  # Pass the full user instance here
             student_number='202111741',
             password=make_password("202111741"),  # Hash the password
+            role='NORMAL'
         )
 
         # Manually set the password and save
         authns_obj.set_password("202111741")  # Hashes the password
         authns_obj.save()
+
+
+
 
         return Response({"message": "User and authns created successfully"}, status=201)
 

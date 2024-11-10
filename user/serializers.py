@@ -1,26 +1,38 @@
 from rest_framework import serializers
 
 #TODO: 웅기님 여깁니다 ㅋㅋ ^_^
-class RentCabinetInfo(serializers.Serializer):
+class RentCabinetInfoSerializer(serializers.Serializer):
     building = serializers.CharField(help_text='건물')
     floor = serializers.CharField(help_text='층')
-    cabinetNumber = serializers.CharField(help_text='캐비넷 번호')
+    cabinet_number = serializers.CharField(help_text='캐비넷 번호')
     status = serializers.CharField(help_text='상태')
-    startDate = serializers.DateField(help_text='사용 시작일')
-    endDate = serializers.DateField(help_text='사용 종료일')
-    leftDate = serializers.IntegerField(help_text='남은 일수')
+    start_date = serializers.DateField(help_text='사용 시작일')
+    end_date = serializers.DateField(help_text='사용 종료일')
+    left_date = serializers.IntegerField(help_text='남은 일수')
 
-class GetProfileMe(serializers.Serializer):
+class GetProfileMeSerializer(serializers.Serializer):
     name = serializers.CharField(help_text='이름')
-    isVisible = serializers.BooleanField(help_text='이름 공개 여부')
+    is_visible = serializers.BooleanField(help_text='이름 공개 여부')
     affiliation = serializers.CharField(help_text='소속')
-    studentNumber = serializers.CharField(help_text='학번')
-    phoneNumber = serializers.CharField(help_text='전화번호')
-    RentCabinetInfo = RentCabinetInfo(help_text='캐비넷 정보')
+    student_number = serializers.CharField(help_text='학번')
+    phone_number = serializers.CharField(help_text='전화번호')
+    RentCabinetInfoSerializer = RentCabinetInfoSerializer(help_text='캐비넷 정보')
 
 
-class UpdateProfileMe(serializers.Serializer):
+class UpdateProfileMeSerializer(serializers.Serializer):
+    is_visible = serializers.BooleanField(help_text='이름 공개 여부')
+
+class UpdateProfileMeDto(serializers.Serializer):
     isVisible = serializers.BooleanField(help_text='이름 공개 여부')
+
+from rest_framework import serializers
+from .models import users
+
+class UserAllInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = users
+        fields = '__all__'  # 모든 필드를 직렬화
+
 
 #axios.get 요청
 #이름
