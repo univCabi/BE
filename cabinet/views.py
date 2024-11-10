@@ -1,5 +1,5 @@
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 
@@ -101,15 +101,32 @@ class CabinetReturnView(APIView):
     def post(self, request):
         return Response.status(status.HTTP_200_OK)
 
-class CabinetSearchView(APIView):
-
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        return Response.status(status.HTTP_200_OK)
 
 class CabinetSearchDetailView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request):
-        return Response.status(status.HTTP_200_OK)
+        cabinetSearchResult = [
+            {
+                "building": "가온관",
+                "floor": 2,
+                "cabinetNumber": 1,
+            },
+            {
+                "building": "건축관",
+                "floor": 2,
+                "cabinetNumber": 2,
+            },
+            {
+                "building": "공학1관",
+                "floor": 3,
+                "cabinetNumber": 2,
+            },
+            {
+                "building": "공학2관",
+                "floor": 2,
+                "cabinetNumber": 3,
+            }
+        ]
+
+        return Response(cabinetSearchResult, status=status.HTTP_200_OK)
