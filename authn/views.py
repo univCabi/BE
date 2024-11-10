@@ -1,4 +1,4 @@
-from authn.authenticate import LoginAuthenticate, IsLoginUser, IsAdminUser
+from authn.authentication import LoginAuthenticate, IsLoginUser, IsAdminUser
 from authn.serializers import LoginSerializer
 from .jwt import CustomLoginJwtToken
 from django.http import HttpResponse
@@ -26,37 +26,23 @@ class LoginView(APIView):
     authentication_classes = [LoginAuthenticate]
 
     # Request Body EXAMPLE
-    @swagger_auto_schema(tags=['로그인을 합니다.'], request_body=LoginSerializer)
+    @swagger_auto_schema(tags=['로그인을 합니다.'], request_body=LoginSerializer, responses={
+        200: {"accessToken": openapi.Schema(type=openapi.TYPE_STRING, description='Access Token'), 
+              "refreshToken": openapi.Schema(type=openapi.TYPE_STRING, description='Refresh Token')},
+              400: {"error": openapi.Schema(type=openapi.TYPE_STRING, description='Invalid Credentials')}
+    })
     def post(self, request):
-
         user = request.user
         if request.user is not None:
-            # GenerFernet.generate_key().decode()ate JWT tokens (access and refresh)
             refresh = CustomLoginJwtToken.get_token(user)
-
+            
             response = HttpResponse('User Login Success')
-
             response.set_cookie('accessToken', str(refresh.access_token))
             response.set_cookie('refreshToken', str(refresh))
-
-            #return response
-        
             return Response({ 'accessToken': str(refresh.access_token), 'refreshToken': str(refresh) })
             
-            
-            # Return the tokens in the response
-            #return Response({
-            #    'access_token': str(refresh.access_token),
-            #    'refresh_token': str(refresh),
-            #})
         else:
             return Response({"error": "Invalid Credentials"}, status=400)
-
-
-
-#class LoginView(APIView):
-#    permission_classes = [AllowAny]
-
 
 
 class LogoutView(APIView):

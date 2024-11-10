@@ -1,6 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from authn.authentication import IsLoginUser
+
 from rest_framework.response import Response
 from rest_framework import status
 
@@ -11,6 +12,8 @@ from authn.models import authns
 from user.models import users
 
 from drf_yasg.utils import swagger_auto_schema
+
+from .serializers import CabinetLogDto
 
 
 
@@ -482,3 +485,25 @@ class CabinetTestView(APIView):
         )
 
         return Response({"message": "cabinet created successfully"},status=status.HTTP_200_OK)
+
+
+class CabinetLogView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = [IsLoginUser]
+
+    def get(self, request):
+        student_number = request.user.student_number
+        
+        user = users.find_one_userinfo_by_student_number(student_number=student_number)
+
+        cabinet_history_infos = cabinet_histories.find_all_cabinet_by_user_id(user_id=user.id)
+
+        # Retrieve all cabinet history records associated with this user
+        #cabinet_history_infos = cabinet_histories.objects.filter(user_id=user.id)
+
+        print(cabinet_history_infos)
+        # Serialize the queryset with many=True
+        cabinet_log_serializer = CabinetLogDto(cabinet_history_infos, many=True)
+
+        return Response(cabinet_log_serializer.data, status=status.HTTP_200_OK)
+    
