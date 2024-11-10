@@ -57,3 +57,8 @@ class users(models.Model):
     def find_one_userinfo_by_student_number(cls, student_number):
         return cls.objects.get(authn_info__student_number=student_number)
 
+    @classmethod
+    def update_user_is_visible_by_student_number(cls, student_number, is_visible):
+        user = cls.objects.get(authn_info__student_number=student_number)
+        user.is_visible = is_visible
+        return user.save()
