@@ -26,12 +26,21 @@ class UpdateProfileMeDto(serializers.Serializer):
     isVisible = serializers.BooleanField(help_text='이름 공개 여부')
 
 from rest_framework import serializers
-from .models import users
+from .models import users, buildings
 
-class UserAllInfoSerializer(serializers.ModelSerializer):
+class UserProfileInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = users
+        fields = ['id', 'name', 'is_visible', 'affiliation', 'phone_number', 'building_id']
+
+
+class BuildingAllInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = buildings
         fields = '__all__'  # 모든 필드를 직렬화
+
+
+
 
 
 #axios.get 요청

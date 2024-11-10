@@ -1,10 +1,13 @@
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 
 from .serializers import requestFindAllCabinetInfoByBuildingNameAndFloor, lentCabinetByUserIdAndCabinetId, returnCabinetByUserIdAndCabinetId, searchCabinetAndBuildingByKeyWord, findAllCabinetHistoryByUserId, cabinetInfoSerializer, floorInfoItemSerializer, floorInfoSerializer, responseFindAllCabinetInfoByBuildingNameAndFloor
-from .models import cabinets, buildings, cabinet_positions
+from .models import cabinets, buildings, cabinet_positions, cabinet_histories
+from authn.models import authns
+
+from user.models import users
 
 from drf_yasg.utils import swagger_auto_schema
 
@@ -113,3 +116,29 @@ class CabinetSearchDetailView(APIView):
 
     def get(self, request):
         return Response.status(status.HTTP_200_OK)
+    
+class CabinetTestView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        cabinets.objects.update_or_create(
+            user_id=users.objects.get(id=1),
+            building_id=buildings.objects.get(name='가온관', floor=1),
+            cabinet_number=1,
+            status='USING',
+            payable='FREE'
+        )
+
+        cabinet_histories.objects.update_or_create(
+            user_id=users.objects.get(id=1),
+            cabinet_id=cabinets.objects.get(building_id=1, cabinet_number=1),
+            expired_at='2024-12-31 23:59:59'
+        )
+
+        cabinet_positions.objects.update_or_create(
+            cabinet_id=cabinets.objects.get(building_id=1, cabinet_number=1),
+            cabinet_x_pos=0,
+            cabinet_y_pos=1000
+        )
+
+        return Response({"message": "cabinet created successfully"},status=status.HTTP_200_OK)

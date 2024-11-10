@@ -83,7 +83,15 @@ class CreateUserView(APIView):
     def post(self, request):
         # Create a new user or update if already exists
 
-        building_info = buildings.objects.get(id=1)
+        buildings.objects.update_or_create(
+            name="가온관",
+            floor = 1,
+            section = "A",
+            width = 1000,
+            height = 1000,
+        )
+
+        building_info = buildings.objects.get(name="가온관", floor=1, section="A")
         
         print("building_info : ", building_info)
         id, created = users.objects.update_or_create(
@@ -113,7 +121,7 @@ class CreateUserView(APIView):
 
         return Response({"message": "User and authns created successfully"}, status=201)
 
-    
+
 
 class DeleteUserView(APIView):
     permission_classes = [AllowAny]

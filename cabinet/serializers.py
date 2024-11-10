@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import cabinets
+from .models import cabinets, cabinet_positions, cabinet_histories
 
 
 class requestFindAllCabinetInfoByBuildingNameAndFloor(serializers.Serializer):
@@ -46,6 +46,19 @@ class responseFindAllCabinetInfoByBuildingNameAndFloor(serializers.Serializer):
     floorInfo = floorInfoSerializer(many=True, help_text="층별 사물함 리스트")
 
 class CabinetAllInfoSerializer(serializers.ModelSerializer):
+    status = serializers.CharField(help_text='상태')  # Ensure this returns a string
+    payable = serializers.CharField(help_text='결제 상태')  # Ensure this returns a string
+
     class Meta:
         model = cabinets
+        fields = ['id', 'user_id', 'building_id', 'cabinet_number', 'status', 'payable', 'created_at', 'updated_at', 'deleted_at']
+
+class CabinetHistoryAllInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = cabinet_histories
+        fields = '__all__'  # 모든 필드를 직렬화
+
+class CabinetPositionAllInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = cabinet_positions
         fields = '__all__'  # 모든 필드를 직렬화

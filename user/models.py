@@ -26,8 +26,9 @@ users model
 
 class buildings(models.Model):
     id = models.AutoField(primary_key=True)
-    name = models.CharField(max_length=20, choices=[(tag, tag.value) for tag in BuildingNameEnum])
-    floor = models.CharField(max_length=10)
+    name = models.CharField(max_length=20, choices=[(tag.value, tag.value) for tag in BuildingNameEnum])
+    floor = models.IntegerField()
+    section = models.CharField(max_length=10)
     width = models.IntegerField()
     height = models.IntegerField()
 
@@ -51,4 +52,8 @@ class users(models.Model):
     @classmethod
     def find_one_userinfo_by_id(cls, id):
         return cls.objects.get_or_create(id=id)
+    
+    @classmethod
+    def find_one_userinfo_by_student_number(cls, student_number):
+        return cls.objects.get(authn_info__student_number=student_number)
 
