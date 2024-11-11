@@ -488,7 +488,7 @@ class CabinetTestView(APIView):
         return Response({"message": "cabinet created successfully"},status=status.HTTP_200_OK)
 
 
-class CabinetLogView(APIView):
+class CabinetHistoryView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = [IsLoginUser]
 
@@ -522,9 +522,9 @@ class CabinetLogView(APIView):
             cabinet_history_infos = cabinet_histories.objects.filter(user_id=user.id)
 
             # Serialize the queryset with many=True
-            cabinet_log_serializer = CabinetLogDto(cabinet_history_infos, many=True)
+            cabinet_history_serializer = CabinetLogDto(cabinet_history_infos, many=True)
 
-            return Response(cabinet_log_serializer.data, status=status.HTTP_200_OK)
+            return Response(cabinet_history_serializer.data, status=status.HTTP_200_OK)
         
         except users.DoesNotExist:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
