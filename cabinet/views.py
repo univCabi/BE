@@ -113,6 +113,7 @@ class CabinetReturnView(APIView):
 
 class CabinetSearchDetailView(APIView):
     permission_classes = [AllowAny]
+    #authentication_classes = [IsLoginUser]
 
     def get(self, request):
         cabinetSearchResult = [
@@ -459,8 +460,6 @@ class CabinetFloorView(APIView) :
             }
 
         return Response(floorInfo, status=status.HTTP_200_OK)
-
-        return Response.status(status.HTTP_200_OK)
     
 class CabinetTestView(APIView):
     permission_classes = [AllowAny]
