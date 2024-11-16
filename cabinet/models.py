@@ -21,7 +21,7 @@ class CabinetPayableEnum(Enum):
 class cabinets(models.Model):
     id = models.AutoField(primary_key=True)
     user_id = models.ForeignKey(users, on_delete=models.CASCADE, null=True)
-    building_id = models.OneToOneField(buildings, on_delete=models.CASCADE)
+    building_id = models.ForeignKey(buildings, on_delete=models.CASCADE)
     cabinet_number = models.IntegerField()
     status = models.CharField(max_length=20, choices=[(tag.value, tag.value) for tag in CabinetStatusEnum], default='AVAILABLE')
     payable = models.CharField(max_length=20, choices=[(tag.value, tag.value) for tag in CabinetPayableEnum], default='FREE')
@@ -33,12 +33,10 @@ class cabinets(models.Model):
         return str(self.building_id)
     
 
-    
-
 class cabinet_histories(models.Model):
     id = models.AutoField(primary_key=True)
-    user_id = models.OneToOneField(users, on_delete=models.CASCADE, null=True)
-    cabinet_id = models.OneToOneField(cabinets, on_delete=models.CASCADE, null=True)
+    user_id = models.ForeignKey(users, on_delete=models.CASCADE)
+    cabinet_id = models.ForeignKey(cabinets, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     expired_at = models.DateTimeField(null=False)
     updated_at = models.DateTimeField(auto_now=True)

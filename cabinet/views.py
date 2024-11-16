@@ -78,16 +78,10 @@ class CabinetMainView(APIView):
 
         return Response(data, status=status.HTTP_200_OK)
         
-#최대 6개    
-class CabinetPagination(PageNumberPagination):
-    page_size = 6
-    page_size_query_param = 'page_size'
-    max_page_size = 100
-    
-
-
+#TODO: 추후에 user 정보 기반으로 검색 가능하도록 수정
 class CabinetSearchView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [IsLoginUser]
 
     def get(self, request):
         keyword = request.GET.get('keyword', '').strip()
@@ -148,35 +142,52 @@ class CabinetReturnView(APIView):
         return Response.status(status.HTTP_200_OK)
 
 
+class CabinetPagination(PageNumberPagination):
+    page_size = 6
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
 class CabinetSearchDetailView(APIView):
     permission_classes = [AllowAny]
+    #permission_classes = [IsAuthenticated]
     #authentication_classes = [IsLoginUser]
+    pagenation_class = CabinetPagination
+
 
     def get(self, request):
-        cabinetSearchResult = [
+        keyword = request.GET.get('keyword', '').strip()
+
+        print("keyword:", keyword)
+
+        if not keyword:
+            return Response({"detail": "Keyword parameter is required."}, status=status.HTTP_400_BAD_REQUEST)
+        elif len(keyword) < 2 and not keyword.isdigit():
+            return Response({"detail": "Keyword must be at least 2 characters long."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Q 객체를 사용하여 여러 필드에 대한 OR 조건 설정
+        q_objects = Q(cabinet_number__icontains=keyword) | Q(building_id__name__icontains=keyword)
+
+        # keyword가 숫자인 경우 floor 필드도 필터링에 추가
+        if keyword.isdigit():
+            q_objects |= Q(building_id__floor=int(keyword))
+
+        # 조인된 buildings 정보도 함께 가져오기 위해 select_related 사용
+        cabinet_info = cabinets.objects.filter(q_objects).select_related('building_id')
+
+        # 디버깅 출력 (실제 배포 시에는 로깅 사용 권장)
+        print("cabinet_info values:", list(cabinet_info.values()))
+
+        # 필요한 정보만 직렬화하여 반환
+        data = [
             {
-                "building": "가온관",
-                "floor": 2,
-                "cabinetNumber": 1,
-            },
-            {
-                "building": "건축관",
-                "floor": 2,
-                "cabinetNumber": 2,
-            },
-            {
-                "building": "공학1관",
-                "floor": 3,
-                "cabinetNumber": 2,
-            },
-            {
-                "building": "공학2관",
-                "floor": 2,
-                "cabinetNumber": 3,
+                "building": cabinet.building_id.name if cabinet.building_id else None,
+                "floor": cabinet.building_id.floor if cabinet.building_id else None,
+                "cabinetNumber": cabinet.cabinet_number,
             }
+            for cabinet in cabinet_info
         ]
 
-        return Response(cabinetSearchResult, status=status.HTTP_200_OK)
+        return Response(data, status=status.HTTP_200_OK)
     
 
 class CabinetFloorView(APIView) :
