@@ -79,3 +79,5 @@ class CabinetLogDto(CamelCaseSerializer):
         fields = ['building', 'floor', 'section', 'cabinetNumber', 'startDate', 'endDate']
 
         
+class CabinetSearchSerializer(serializers.Serializer):
+    keyword = serializers.CharField(required=True, max_length=100)
