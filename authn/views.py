@@ -80,72 +80,70 @@ class LogoutView(APIView):
         
 from cabinet.models import cabinets, cabinet_histories, cabinet_positions
 
+
+import os
+import glob
+import sqlparse
+from django.conf import settings
+from django.core.management import call_command
+from django.db import connection, transaction
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+
+import logging
+
+logger = logging.getLogger(__name__)
 class CreateUserView(APIView):
     permission_classes = [AllowAny]
     #authentication_classes = []
 
     #@swagger_auto_schema(tags=['회원가입을 합니다.'], request_body=LoginSerializer)
     def post(self, request):
-        # Create a new user or update if already exists
+        try:
+                # Define the path to the SQL files
+                sql_dir = os.path.join(settings.BASE_DIR, 'sql')  # Adjust the path as needed
 
-        buildings.objects.update_or_create(
-            name="가온관",
-            floor = 1,
-            section = "A",
-            width = 1000,
-            height = 1000,
-        )
+                if not os.path.isdir(sql_dir):
+                    error_msg = f"SQL directory not found at {sql_dir}."
+                    logger.error(error_msg)
+                    return Response({'error': error_msg}, status=status.HTTP_400_BAD_REQUEST)
 
-        building_info = buildings.objects.get(name="가온관", floor=1, section="A")
-        
-        print("building_info : ", building_info)
-        id, created = users.objects.update_or_create(
-            name="민영재",
-            affiliation="전자정보통신공학부 전자공학전공",
-            building_id=building_info,
-            phone_number="010-1234-5678",
-            is_visible=True,
-        )
+                # Specify the ordered list of SQL files
+                ordered_sql_files = [
+                    'playable.sql'
+                ]
 
-        #print("user : ", id)
-
-        # Create or update the authns entry, ensure password is hashed
-        authns_obj, created = authns.objects.update_or_create(
-            user_id=id,  # Pass the full user instance here
-            student_number='202111741',
-            password=make_password("202111741"),  # Hash the password
-            role='NORMAL'
-        )
-
-        # Manually set the password and save
-        authns_obj.set_password("202111741")  # Hashes the password
-        authns_obj.save()
-
-
-        cabinet_id = cabinets.objects.create(
-            user_id=id,
-            building_id=building_info,
-            cabinet_number=1,
-            status='USING',
-            payable='FREE'
-        )
-        
-        cabinet_histories.objects.create(
-            user_id=id,
-            cabinet_id=cabinet_id,
-            expired_at='2021-12-31 23:59:59'
-        )
-
-        cabinet_positions.objects.create(
-            cabinet_id=cabinet_id,
-            cabinet_x_pos=0,
-            cabinet_y_pos=1000
-        )
-
-
-
-        return Response({"message": "User and authns created successfully"}, status=200)
-
+                # Execute each SQL file in the specified order
+                with connection.cursor() as cursor:
+                    for sql_file in ordered_sql_files:
+                        print("executed")
+                        sql_path = os.path.join(sql_dir, sql_file)
+                        if not os.path.isfile(sql_path):
+                            error_msg = f"SQL file not found: {sql_file}"
+                            logger.error(error_msg)
+                            return Response({'error': error_msg}, status=status.HTTP_400_BAD_REQUEST)
+                        
+                        with open(sql_path, 'r', encoding='utf-8') as file:
+                            sql_content = file.read()
+                            # Use sqlparse to split the SQL content into individual statements
+                            statements = sqlparse.split(sql_content)
+                            
+                            for statement in statements:
+                                statement = statement.strip()
+                                print(statement)
+                                if statement:  # Avoid executing empty statements
+                                    try:
+                                        cursor.execute(statement)
+                                        #logger.info(f"Executed statement from {sql_file}: {statement[:50]}...")  # Log first 50 chars
+                                    except Exception as exec_err:
+                                        logger.error(f"Error executing statement from {sql_file}: {exec_err}")
+                                        raise exec_err  # This will trigger a rollback
+                                
+                return Response({'message': 'Database flushed and SQL files executed successfully.'}, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error(f"Error executing SQL files: {e}")
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class DeleteUserView(APIView):
@@ -154,10 +152,13 @@ class DeleteUserView(APIView):
 
     #@swagger_auto_schema(tags=['회원탈퇴를 합니다.'], request_body=LoginSerializer)
     def post(self, request):
-        users.objects.all().delete()
-        authns.objects.all().delete()
-        buildings.objects.all().delete()
-        cabinets.objects.all().delete()
-        cabinet_histories.objects.all().delete()
-        cabinet_positions.objects.all().delete()
+        user_ids = [2501, 2502, 2503]
+
+        # authns 테이블에서 삭제
+        authns.objects.filter(user_id__in=user_ids).delete()
+
+        # users 테이블에서 삭제
+        users.objects.filter(id__in=user_ids).delete()
+
+        print(f"Deleted users and authns entries for user_ids: {user_ids}")
         return Response({"message": "User deleted successfully"}, status=204)
