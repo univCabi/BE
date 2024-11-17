@@ -580,9 +580,15 @@ class CabinetTestView(APIView):
         return Response({"message": "cabinet created successfully"},status=status.HTTP_200_OK)
 
 
+class PageNumberPagination(PageNumberPagination):
+    page_size = 15  # Number of items per page
+    page_size_query_param = 'pageSize'  # Allow client to set page size via query parameter
+    max_page_size = 100  # Maximum items per page
+
 class CabinetHistoryView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = [IsLoginUser]
+    pagination_class = PageNumberPagination
 
     @swagger_auto_schema(
         tags=['사물함 이력 조회'],
@@ -616,7 +622,12 @@ class CabinetHistoryView(APIView):
             # Serialize the queryset with many=True
             cabinet_history_serializer = CabinetLogDto(cabinet_history_infos, many=True)
 
-            return Response(cabinet_history_serializer.data, status=status.HTTP_200_OK)
+            # Initialize the paginator
+            paginator = self.pagination_class()
+            paginated_cabinet_history = paginator.paginate_queryset(cabinet_history_infos, request)
+
+            # Return the paginated response
+            return paginator.get_paginated_response(cabinet_history_serializer.data)
         
         except users.DoesNotExist:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
