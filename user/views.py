@@ -122,3 +122,75 @@ class ProfileMeView(APIView):
             print(f"Unexpected error: {e}")
             return Response({'error': 'Internal Server Error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
+
+import os
+import glob
+import sqlparse
+from django.conf import settings
+from django.core.management import call_command
+from django.db import connection, transaction
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+class MockupView(APIView):
+    permission_classes = [AllowAny]  # WARNING: Allowing any user to execute this is insecure. Restrict permissions as needed.
+
+    def post(self, request):
+        try:
+            with transaction.atomic():
+                # Flush the database, removing all data
+                call_command('flush', '--noinput')
+                logger.info("Database flushed successfully.")
+
+                # Define the path to the SQL files
+                sql_dir = os.path.join(settings.BASE_DIR, 'sql')  # Adjust the path as needed
+
+                if not os.path.isdir(sql_dir):
+                    error_msg = f"SQL directory not found at {sql_dir}."
+                    logger.error(error_msg)
+                    return Response({'error': error_msg}, status=status.HTTP_400_BAD_REQUEST)
+
+                # Specify the ordered list of SQL files
+                ordered_sql_files = [
+                    'user_buildings.sql',
+                    'user_users.sql',
+                    'authn_authns.sql',
+                    'cabinet_cabinets.sql',
+                    'cabinet_cabinet_positions.sql',
+                ]
+
+                # Execute each SQL file in the specified order
+                with connection.cursor() as cursor:
+                    for sql_file in ordered_sql_files:
+                        print("executed")
+                        sql_path = os.path.join(sql_dir, sql_file)
+                        if not os.path.isfile(sql_path):
+                            error_msg = f"SQL file not found: {sql_file}"
+                            logger.error(error_msg)
+                            return Response({'error': error_msg}, status=status.HTTP_400_BAD_REQUEST)
+                        
+                        with open(sql_path, 'r', encoding='utf-8') as file:
+                            sql_content = file.read()
+                            # Use sqlparse to split the SQL content into individual statements
+                            statements = sqlparse.split(sql_content)
+                            
+                            for statement in statements:
+                                statement = statement.strip()
+                                print(statement)
+                                if statement:  # Avoid executing empty statements
+                                    try:
+                                        cursor.execute(statement)
+                                        #logger.info(f"Executed statement from {sql_file}: {statement[:50]}...")  # Log first 50 chars
+                                    except Exception as exec_err:
+                                        logger.error(f"Error executing statement from {sql_file}: {exec_err}")
+                                        raise exec_err  # This will trigger a rollback
+                                
+                return Response({'message': 'Database flushed and SQL files executed successfully.'}, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error(f"Error executing SQL files: {e}")
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
