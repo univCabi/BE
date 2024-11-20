@@ -8,6 +8,17 @@ class requestFindAllCabinetInfoByBuildingNameAndFloor(serializers.Serializer):
     buildingName = serializers.CharField(help_text='건물명')
     floor = serializers.CharField(help_text='층수')
 
+    def validate_buildingName(self, value):
+        if not value.isalpha():
+            raise serializers.ValidationError('건물명은 문자로 입력해주세요.')
+        return
+
+    def validate_floor(self, value):
+        if not value.isdigit():
+            raise serializers.ValidationError('층수는 숫자로 입력해주세요.')
+        return value
+    
+
 
 class lentCabinetByUserIdAndCabinetId(serializers.Serializer):
     userId = serializers.IntegerField(help_text='유저 ID')
@@ -81,3 +92,38 @@ class CabinetLogDto(CamelCaseSerializer):
         
 class CabinetSearchSerializer(serializers.Serializer):
     keyword = serializers.CharField(required=True, max_length=100)
+
+
+
+class CabinetFloorSerializer(serializers.ModelSerializer):
+    isVisible = serializers.SerializerMethodField()
+    username = serializers.SerializerMethodField()
+    isMine = serializers.SerializerMethodField()
+    cabinetXPos = serializers.IntegerField(source='cabinet_positions.cabinet_x_pos', read_only=True)
+    cabinetYPos = serializers.IntegerField(source='cabinet_positions.cabinet_y_pos', read_only=True)
+    cabinetNumber = serializers.IntegerField(source='cabinet_number', read_only=True)
+
+    class Meta:
+        model = cabinets
+        fields = ['cabinetNumber', 'cabinetXPos', 'cabinetYPos', 'status', 'isVisible', 'username', 'isMine']
+
+    def get_isVisible(self, obj):
+        return obj.user_id.is_visible if obj.user_id else None
+
+    def get_username(self, obj):
+        return obj.user_id.username if obj.user_id else None
+
+    def get_isMine(self, obj):
+        request = self.context.get('request')
+        return obj.user_id == request.user if obj.user_id else False
+    
+class FloorInfoSerializer(serializers.Serializer):
+    floor = serializers.IntegerField()
+    section = serializers.CharField()
+    floorWidth = serializers.IntegerField()
+    floorHeight = serializers.IntegerField()
+    cabinets = CabinetFloorSerializer(many=True)
+
+    def get_cabinets(self, obj):
+        cabinets = obj['cabinets']
+        return CabinetFloorSerializer(cabinets, many=True, context=self.context).data

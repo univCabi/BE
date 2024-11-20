@@ -13,7 +13,8 @@ from drf_yasg.utils import swagger_auto_schema
 from .models import cabinets, buildings, cabinet_positions, cabinet_histories
 from user.models import users
 from .serializers import requestFindAllCabinetInfoByBuildingNameAndFloor, lentCabinetByUserIdAndCabinetId
-from .serializers import CabinetLogDto
+from .serializers import CabinetLogDto, CabinetFloorSerializer, FloorInfoSerializer
+from .dto import CabinetFloorQueryParamDto
 from authn.authentication import IsLoginUser
 
 # Create your views here.
@@ -236,322 +237,58 @@ class CabinetSearchDetailView(APIView):
         return paginator.get_paginated_response(data)
     
 
-class CabinetFloorView(APIView) :
-    permission_classes = [AllowAny]
+class CabinetFloorView(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [IsLoginUser]
+
+    @swagger_auto_schema(tags=['사물함 정보 조회'], query_serializer=CabinetFloorQueryParamDto, responses={
+        200: openapi.Response(
+            description="성공적으로 조회되었습니다.",
+            schema=FloorInfoSerializer
+        ),})
     def get(self, request):
-        building_name = request.GET.get('building')
-        floor = request.GET.get('floor')
+        cabinetFloorDto = CabinetFloorQueryParamDto(data=request.query_params)
+
+        if not cabinetFloorDto.is_valid():
+            return Response(cabinetFloorDto.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 해당 건물과 층을 가진 빌딩 조회
+        building = buildings.objects.filter(name=cabinetFloorDto.validated_data.get('building'), floor=cabinetFloorDto.validated_data.get('floor')).first()
+        if not building:
+            return Response(
+                {"error": "Building with the specified name and floor not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # 빌딩의 너비와 높이 가져오기
+        floor_width = building.width
+        floor_height = building.height
+        section = building.section 
+
+        # 빌딩에 속한 모든 캐비닛 조회 (관련된 사용자 정보와 위치 정보도 함께 가져오기)
+        cabinets_qs = cabinets.objects.filter(building_id=building).select_related('user_id', 'cabinet_positions')
+
+        if not cabinets_qs:
+            return Response(
+                {"error": "No cabinets found in the specified building and floor."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # 캐비닛 직렬화
+        floor_info = {
+            "floor": building.floor,
+            "section": section,
+            "floorWidth": floor_width,
+            "floorHeight": floor_height,
+            "cabinets": cabinets_qs
+        }
+
+        # FloorInfoSerializer를 사용하여 응답 데이터 직렬화
+        floor_info_serializer = FloorInfoSerializer(floor_info, context={'request': request})
 
 
-        floorInfo = {
-                "floor": 1,
-                "floorWidth": 500,
-                "floorHeight": 1000,
-                "cabinets": [
-                    {
-                        "cabinetNumber": 1,
-                        "xPos": 0,
-                        "yPos": 1000,
-                        "status": "AVAILABLE",
-                    },
-                    {
-                        "cabinetNumber": 2,
-                        "xPos": 0,
-                        "yPos": 900,
-                        "status": "AVAILABLE",
-                    },
-                    {
-                        "cabinetNumber": 3,
-                        "xPos": 0,
-                        "yPos": 800,
-                        "status": "AVAILABLE",
-                    },
-                    {
-                        "cabinetNumber": 4,
-                        "xPos": 0,
-                        "yPos": 700,
-                        "status": "AVAILABLE",
-                    },
-                    {
-                        "cabinetNumber": 5,
-                        "xPos": 0,
-                        "yPos": 600,
-                        "status": "AVAILABLE",
-                    },
-                    {
-                        "cabinetNumber": 6,
-                        "xPos": 0,
-                        "yPos": 500,
-                        "status": "AVAILABLE",
-                    },
-                    {
-                        "cabinetNumber": 7,
-                        "xPos": 0,
-                        "yPos": 400,
-                        "status": "AVAILABLE",
-                    },
-                    {
-                        "cabinetNumber": 8,
-                        "xPos": 0,
-                        "yPos": 300,
-                        "status": "AVAILABLE",
-                    },
-                    {
-                        "cabinetNumber": 9,
-                        "xPos": 0,
-                        "yPos": 200,
-                        "status": "AVAILABLE",
-                    },
-                    {
-                        "cabinetNumber": 10,
-                        "xPos": 0,
-                        "yPos": 100,
-                        "status": "AVAILABLE",
-                    },
-                    {
-                        "cabinetNumber": 11,
-                        "xPos": 100,
-                        "yPos": 1000,
-                        "status": "AVAILABLE",
-                    },
-                    {
-                        "cabinetNumber": 12,
-                        "xPos": 100,
-                        "yPos": 900,
-                        "status": "AVAILABLE",
-                    },
-                    {
-                        "cabinetNumber": 13,
-                        "xPos": 100,
-                        "yPos": 800,
-                        "status": "AVAILABLE",
-                    },
-                    {
-                        "cabinetNumber": 14,
-                        "xPos": 100,
-                        "yPos": 700,
-                        "status": "AVAILABLE",
-                    },
-                    {
-                        "cabinetNumber": 15,
-                        "xPos": 100,
-                        "yPos": 600,
-                        "status": "AVAILABLE",
-                    },
-                    {
-                        "cabinetNumber": 16,
-                        "xPos": 100,
-                        "yPos": 500,
-                        "status": "AVAILABLE",
-                    },
-                    {
-                        "cabinetNumber": 17,
-                        "xPos": 100,
-                        "yPos": 400,
-                        "status": "AVAILABLE",
-                    },
-                    {
-                        "cabinetNumber": 18,
-                        "xPos": 100,
-                        "yPos": 300,
-                        "status": "AVAILABLE",
-                    },
-                    {
-                        "cabinetNumber": 19,
-                        "xPos": 100,
-                        "yPos": 200,
-                        "status": "AVAILABLE",
-                    },
-                    {
-                        "cabinetNumber": 20,
-                        "xPos": 100,
-                        "yPos": 100,
-                        "status": "AVAILABLE",
-                    },
-                    {
-                        "cabinetNumber": 21,
-                        "xPos": 200,
-                        "yPos": 1000,
-                        "status": "AVAILABLE",
-                    },
-                    {
-                        "cabinetNumber": 22,
-                        "xPos": 200,
-                        "yPos": 900,
-                        "status": "AVAILABLE",
-                    },
-                    {
-                        "cabinetNumber": 23,
-                        "xPos": 200,
-                        "yPos": 800,
-                        "status": "AVAILABLE",
-                    },
-                    {
-                        "cabinetNumber": 24,
-                        "xPos": 200,
-                        "yPos": 700,
-                        "status": "AVAILABLE",
-                    },
-                    {
-                        "cabinetNumber" : 25,
-                        "xPos": 200,
-                        "yPos": 600,
-                        "status": "BROKEN",
-                    },
-                    {
-                        "cabinetNumber": 26,
-                        "xPos": 200,
-                        "yPos": 500,
-                        "status": "USING",
-                    },
-                    {
-                        "cabinetNumber": 27,
-                        "xPos": 200,
-                        "yPos": 400,
-                        "status": "USING",
-                    },
-                    {
-                        "cabinetNumber": 28,
-                        "xPos": 200,
-                        "yPos": 300,
-                        "status": "USING",
-                    },
-                    {
-                        "cabinetNumber": 29,
-                        "xPos": 200,
-                        "yPos": 200,
-                        "status": "USING",
-                    },
-                    {
-                        "cabinetNumber": 30,
-                        "xPos": 200,
-                        "yPos": 100,
-                        "status": "BROKEN",
-                    },
-                    {
-                        "cabinetNumber": 31,
-                        "xPos": 300,
-                        "yPos": 1000,
-                        "status": "USING",
-                    },
-                    {
-                        "cabinetNumber": 32,
-                        "xPos": 300,
-                        "yPos": 900,
-                        "status": "USING",
-                    },
-                    {
-                        "cabinetNumber": 33,
-                        "xPos": 300,
-                        "yPos": 800,
-                        "status": "OVERDUE",
-                    },
-                    {
-                        "cabinetNumber": 34,
-                        "xPos": 300,
-                        "yPos": 700,
-                        "status": "USING",
-                    },
-                    {
-                        "cabinetNumber": 35,
-                        "xPos": 300,
-                        "yPos": 600,
-                        "status": "OVERDUE",
-                    },
-                    {
-                        "cabinetNumber": 36,
-                        "xPos": 300,
-                        "yPos": 500,
-                        "status": "USING",
-                    },
-                    {
-                        "cabinetNumber": 37,
-                        "xPos": 300,
-                        "yPos": 400,
-                        "status": "AVAILABLE",
-                    },
-                    {
-                        "cabinetNumber": 38,
-                        "xPos": 300,
-                        "yPos": 300,
-                        "status": "USING",
-                    },
-                    {
-                        "cabinetNumber": 39,
-                        "xPos": 300,
-                        "yPos": 200,
-                        "status": "USING",
-                    },
-                    {
-                        "cabinetNumber": 40,
-                        "xPos": 300,
-                        "yPos": 100,
-                        "status": "USING",
-                    },
-                    {
-                        "cabinetNumber": 41,
-                        "xPos": 400,
-                        "yPos": 1000,
-                        "status": "USING",
-                    },
-                    {
-                        "cabinetNumber": 42,
-                        "xPos": 400,
-                        "yPos": 900,
-                        "status": "USING",
-                    },
-                    {
-                        "cabinetNumber": 43,
-                        "xPos": 400,
-                        "yPos": 800,
-                        "status": "USING",
-                    },
-                    {
-                        "cabinetNumber": 44,
-                        "xPos": 400,
-                        "yPos": 700,
-                        "status": "USING",
-                    },
-                    {
-                        "cabinetNumber": 45,
-                        "xPos": 400,
-                        "yPos": 600,
-                        "status": "USING",
-                    },
-                    {
-                        "cabinetNumber": 46,
-                        "xPos": 400,
-                        "yPos": 500,
-                        "status": "USING",
-                    },
-                    {
-                        "cabinetNumber": 47,
-                        "xPos": 400,
-                        "yPos": 400,
-                        "status": "USING",
-                    },
-                    {
-                        "cabinetNumber": 48,
-                        "xPos": 400,
-                        "yPos": 300,
-                        "status": "USING",
-                    },
-                    {
-                        "cabinetNumber": 49,
-                        "xPos": 400,
-                        "yPos": 200,
-                        "status": "USING",
-                    },
-                    {
-                        "cabinetNumber": 50,
-                        "xPos": 400,
-                        "yPos": 100,
-                        "status": "USING",
-                    }
-                ]
-            }
-
-        return Response(floorInfo, status=status.HTTP_200_OK)
+        return Response(floor_info_serializer.data, status=status.HTTP_200_OK)
+    
     
 class CabinetTestView(APIView):
     permission_classes = [AllowAny]

@@ -1,66 +1,67 @@
 from rest_framework import serializers
+from datetime import datetime
+from .models import users
+from cabinet.models import cabinets, cabinet_histories
+from authn.models import authns
+from .dto import CabinetFloorInputDTO
 
-#TODO: 웅기님 여깁니다 ㅋㅋ ^_^
-#class RentCabinetInfoSerializer(serializers.Serializer):
-#    building = serializers.CharField(help_text='건물')
-#    floor = serializers.CharField(help_text='층')
-#    cabinet_number = serializers.CharField(help_text='캐비넷 번호')
-#    status = serializers.CharField(help_text='상태')
-#    start_date = serializers.DateField(help_text='사용 시작일')
-#    end_date = serializers.DateField(help_text='사용 종료일')
-#    left_date = serializers.IntegerField(help_text='남은 일수')
+from univ_cabi.utils import CamelCaseSerializer
 
-#class GetProfileMeSerializer(serializers.Serializer):
-#    name = serializers.CharField(help_text='이름')
-#    is_visible = serializers.BooleanField(help_text='이름 공개 여부')
-#    affiliation = serializers.CharField(help_text='소속')
-#    student_number = serializers.CharField(help_text='학번')
-#    phone_number = serializers.CharField(help_text='전화번호')
-#    RentCabinetInfoSerializer = RentCabinetInfoSerializer(help_text='캐비넷 정보')
+import pytz  # Add this import for timezone handling
+
+class GetProfileMeSerializer(CamelCaseSerializer):
+    name = serializers.CharField(help_text='이름')
+    affiliation = serializers.CharField(help_text='소속')
+    isVisible = serializers.BooleanField(source='is_visible', help_text='이름 공개 여부')
+    studentNumber = serializers.IntegerField(source='authn_info.student_number', help_text='학번')
+    phoneNumber = serializers.CharField(source='phone_number', help_text='전화번호')
+    rentCabinetInfo = serializers.SerializerMethodField(help_text='캐비넷 정보')
+
+    class Meta:
+        model = users
+        fields = ['name', 'isVisible', 'affiliation', 'studentNumber', 'phoneNumber', 'rentCabinetInfo']
+    
+    def get_rentCabinetInfo(self, obj):
+        cabinet = cabinets.objects.filter(user_id=obj.id).first()
+        if not cabinet:
+            return None
+
+        try:
+            cabinet_history = cabinet_histories.objects.filter(cabinet_id=cabinet.id).latest('expired_at')
+        except cabinet_histories.DoesNotExist:
+            cabinet_history = None
+
+        # Make `current_time` timezone-aware
+        current_time = datetime.now(pytz.UTC)  # Ensure timezone awareness
+
+        # Calculate `leftDate`
+        left_date = (
+            (cabinet_history.expired_at - current_time).days
+            if cabinet_history and cabinet_history.expired_at
+            else None
+        )
+
+        return {
+            'building': cabinet.building_id.name,
+            'floor': cabinet.building_id.floor,
+            'cabinetNumber': cabinet.cabinet_number,
+            'status': cabinet.status,
+            'startDate': cabinet_history.created_at if cabinet_history else None,
+            'endDate': cabinet_history.expired_at if cabinet_history else None,
+            'leftDate': left_date
+        }
 
 
-#class UpdateProfileMeSerializer(serializers.Serializer):
-#    is_visible = serializers.BooleanField(help_text='이름 공개 여부')
-
-#class UpdateProfileMeDto(serializers.Serializer):
-#    isVisible = serializers.BooleanField(help_text='이름 공개 여부')
-
-#from rest_framework import serializers
-#from .models import users, buildings
-
-#class UserProfileInfoSerializer(serializers.ModelSerializer):
-#    class Meta:
-#        model = users
-#        fields = ['id', 'name', 'is_visible', 'affiliation', 'phone_number', 'building_id']
+class UpdateProfileMeSerializer(serializers.Serializer):
+    isVisible = serializers.BooleanField(help_text='이름 공개 여부')
 
 
-#class BuildingAllInfoSerializer(serializers.ModelSerializer):
-#    class Meta:
-#        model = buildings
-#        fields = '__all__'  # 모든 필드를 직렬화
+class CabinetFloorInputSerializer(serializers.Serializer):
+    building = serializers.CharField(max_length=20)
+    floor = serializers.IntegerField(min_value=1)
 
-
-
-
-
-#axios.get 요청
-#이름
-
-#이름-> 이름 공개할지 안할지 true false
-
-#전공
-
-#학번
-
-#전화번호
-
-#몇관 몇층
-
-#사용 기간
-
-#남은 기간
-
-#종료 일자
-#------------------------------------------------
-#axios.post 요청
-#유저의 위의 데이터 저장
+    def create_dto(self):
+        return CabinetFloorInputDTO(
+            building=self.validated_data['building'],
+            floor=self.validated_data['floor']
+        )
