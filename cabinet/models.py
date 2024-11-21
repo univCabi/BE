@@ -48,6 +48,10 @@ class cabinet_histories(models.Model):
     @classmethod
     def find_all_cabinet_by_user_id(cls, user_id):
         return cls.objects.filter(user_id=user_id)
+
+    @classmethod
+    def create_rent_cabinet_history(cls, user_id, cabinet_id, expired_at, status):
+        return cls.objects.create(user_id=user_id, cabinet_id=cabinet_id, expired_at=expired_at).update(status='USING')
     
 class cabinet_positions(models.Model) :
     cabinet_id = models.OneToOneField(cabinets, on_delete=models.CASCADE)

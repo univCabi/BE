@@ -12,74 +12,16 @@ from drf_yasg.utils import swagger_auto_schema
 
 from .models import cabinets, buildings, cabinet_positions, cabinet_histories
 from user.models import users
+from authn.models import authns
 from .serializers import requestFindAllCabinetInfoByBuildingNameAndFloor, lentCabinetByUserIdAndCabinetId
 from .serializers import CabinetLogDto, CabinetFloorSerializer, FloorInfoSerializer
-from .dto import CabinetFloorQueryParamDto
+from .dto import CabinetFloorQueryParamDto, CabinetRentDto
 from authn.authentication import IsLoginUser
 
 import logging
 
 # Create your views here.
 logger = logging.getLogger(__name__)
-
-class CabinetMainView(APIView):
-    @swagger_auto_schema(tags=['특정건물과 특정층의 사물함 정보를 반환합니다.'], 
-                         query_serializer=requestFindAllCabinetInfoByBuildingNameAndFloor, 
-                         responses={200: 'Success'})
-    def get(self, request):
-        # 쿼리 파라미터로 건물명과 층수 받기
-        serializer = requestFindAllCabinetInfoByBuildingNameAndFloor(data=request.query_params)
-        
-        # 입력값 유효성 검사
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
-        building_name = serializer.validated_data.get("buildingName")
-        floor = serializer.validated_data.get("floor")
-        
-        # 해당 건물명과 층수를 가진 빌딩을 필터링
-        try:
-            building = buildings.objects.get(name=building_name, floor=floor)
-        except buildings.DoesNotExist:
-            return Response({"error": "Building not found"}, status=status.HTTP_404_NOT_FOUND)
-        
-        # 해당 빌딩에 연결된 모든 사물함 조회
-        cabinets_in_building = cabinets.objects.filter(building_id=building)
-
-        # 반환해야 할 내용
-        #cabinet_id
-        #username -> nullable
-        #is_visible -> nullable
-        #is_mine -> boolean
-        #x_pos
-        #y_pos
-        #cabinet_number
-        #status
-        #payable
-
-        #cabinetInfo = [{}]
-        #floorInfo = {floor width, height }
-        
-        for cabinet in cabinets_in_building :
-            cabinets_positions = cabinet_positions.objects.filter(cabinet_id=cabinet.id)
-            # 필요한 정보만 직렬화하여 반환
-            data = [
-                {
-                    "id": cabinet.id,
-                    "username": cabinet.user_id.id if cabinet.user_id else None,
-                    "isVisible": cabinet.user_id.is_visible if cabinet.user_id else None,
-                    "isMine": True if cabinet.user_id == request.user else False,
-                    "xPos": cabinet_positions.cabinet_x_pos,
-                    "yPos": cabinet_positions.cabinet_y_pos,
-                    "cabinetNumber": cabinet_positions.cabinet_number,
-                    "status": cabinet.status,
-                    "payable": cabinet.payable
-                }
-                
-            ]
-        
-
-        return Response(data, status=status.HTTP_200_OK)
         
 #TODO: 추후에 user 정보 기반으로 검색 가능하도록 수정
 class CabinetSearchView(APIView):
@@ -132,44 +74,33 @@ class CabinetSearchView(APIView):
 # 나중에 무한 스크롤
 #TODO: 추후의 유저가 해당 건물과 층에 대한 사물함을 대여할 수 있도록 수정
 class CabinetRentView(APIView):
-
-    permission_classes = [IsAuthenticated]
+    permission_classes = []
     authentication_classes = [IsLoginUser]
+
     @swagger_auto_schema(tags=['사물함을 대여합니다.'], request_body=lentCabinetByUserIdAndCabinetId)
     def post(self, request):
-    #building, floor, section, cabinetNumber, 
-        # 유저 ID와 사물함 ID 받기
-
         student_number = request.user.student_number
-        building = request.data.get('building')
-        floor = request.data.get('floor')
-        section = request.data.get('section')
-        cabinetNumber = request.data.get('cabinetNumber')
+        cabinet_rent_dto = CabinetRentDto(data=request.data)
 
-        if not building or not floor or not section or not cabinetNumber:
-            return Response({"error": "Invalid request body"}, status=status.HTTP_400_BAD_REQUEST)
+        if not cabinet_rent_dto.is_valid():
+            return Response(cabinet_rent_dto.errors, status=status.HTTP_400_BAD_REQUEST)
         
-
-        cabinetInfo = cabinets.objects.filter(building_id__name=building, building_id__floor=floor, building_id__section=section, cabinet_number=cabinetNumber)
-
-        if not cabinetInfo:
-            return Response({"error": "Cabinet not found"}, status=status.HTTP_404_NOT_FOUND)
+        cabinet_histories_info = cabinet_histories.objects.filter(cabinet_id=cabinet_rent_dto.validated_data.get('cabinetId'), ended_at=None).first()
         
-        # 이미 대여 중인지 확인
-        if cabinetInfo.status == 'USING':
-            return Response({"error": "Cabinet is already in use"}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # 이미 대여한 사물함이 있는지 확인
-        if cabinet_histories.objects.filter(user_id=users.objects.get(student_number=student_number), ended_at=None):
+        if cabinet_histories_info:
             return Response({"error": "Cabinet is already rented"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        authns_info = authns.objects.filter(student_number=student_number).first()
 
         # 대여 이력 생성
         cabinet_histories.objects.create(
-            user_id=users.objects.get(student_number=student_number),
-            cabinet_id=cabinetInfo,
+            user_id=request.user,
+            cabinet_id=cabinets.objects.get(id=cabinet_rent_dto.validated_data.get('cabinetId')),
             expired_at='2024-12-31 23:59:59'
         )
-        
+
+        # 사물함 상태 변경
+        cabinets.create_cabinet_history(id=cabinet_rent_dto.validated_data.get('cabinetId')).update(status='USING')
         return Response.status(status.HTTP_200_OK)
 
 class CabinetReturnView(APIView):
@@ -242,8 +173,8 @@ class CabinetSearchDetailView(APIView):
     
 
 class CabinetFloorView(APIView):
-    authentication_classes = [IsAuthenticated]
-    permission_classes = [IsLoginUser]
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [IsLoginUser]
 
     @swagger_auto_schema(tags=['사물함 정보 조회'], query_serializer=CabinetFloorQueryParamDto, responses={
         200: openapi.Response(
@@ -294,33 +225,6 @@ class CabinetFloorView(APIView):
         return Response(floor_info_serializer.data, status=status.HTTP_200_OK)
     
     
-class CabinetTestView(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        cabinets.objects.update_or_create(
-            user_id=users.objects.get(id=1),
-            building_id=buildings.objects.get(name='가온관', floor=1),
-            cabinet_number=1,
-            status='USING',
-            payable='FREE'
-        )
-
-        cabinet_histories.objects.update_or_create(
-            user_id=users.objects.get(id=1),
-            cabinet_id=cabinets.objects.get(building_id=1, cabinet_number=1),
-            expired_at='2024-12-31 23:59:59'
-        )
-
-        cabinet_positions.objects.update_or_create(
-            cabinet_id=cabinets.objects.get(building_id=1, cabinet_number=1),
-            cabinet_x_pos=0,
-            cabinet_y_pos=1000
-        )
-
-        return Response({"message": "cabinet created successfully"},status=status.HTTP_200_OK)
-
-
 class PageNumberPagination(PageNumberPagination):
     page_size = 15  # Number of items per page
     page_size_query_param = 'pageSize'  # Allow client to set page size via query parameter
