@@ -17,7 +17,10 @@ from .serializers import CabinetLogDto, CabinetFloorSerializer, FloorInfoSeriali
 from .dto import CabinetFloorQueryParamDto
 from authn.authentication import IsLoginUser
 
+import logging
+
 # Create your views here.
+logger = logging.getLogger(__name__)
 
 class CabinetMainView(APIView):
     @swagger_auto_schema(tags=['특정건물과 특정층의 사물함 정보를 반환합니다.'], 
@@ -182,10 +185,10 @@ class CabinetPagination(PageNumberPagination):
     max_page_size = 100  # Maximum items per page
 
 class CabinetSearchDetailView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [IsLoginUser]
     pagination_class = CabinetPagination
     #permission_classes = [IsAuthenticated]
-    #authentication_classes = [IsLoginUser]
 
     @swagger_auto_schema(tags=['사물함 구체적인 검색 결과'], manual_parameters=[
         openapi.Parameter('keyword', openapi.IN_QUERY, type=openapi.TYPE_STRING, description='검색어', required=True),
@@ -193,6 +196,7 @@ class CabinetSearchDetailView(APIView):
         openapi.Parameter('pageSize', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, description='페이지 크기', required=False),
     ])
     def get(self, request):
+        logger.info("CabinetSearchDetailView GET")
         keyword = request.GET.get('keyword', '').strip()
 
         print("keyword:", keyword)
@@ -239,7 +243,7 @@ class CabinetSearchDetailView(APIView):
 
 class CabinetFloorView(APIView):
     permission_classes = [IsAuthenticated]
-    authentication_classes = [IsLoginUser]
+    authentication_classes = [AllowAny]
 
     @swagger_auto_schema(tags=['사물함 정보 조회'], query_serializer=CabinetFloorQueryParamDto, responses={
         200: openapi.Response(
