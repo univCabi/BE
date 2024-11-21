@@ -5,7 +5,7 @@ from drf_yasg             import openapi
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from authn.authentication import IsLoginUser
 
-from user.dto import GetProfileMeDto, UpdateProfileMeDto
+from .serializers import GetProfileMeSerializer, UpdateProfileMeSerializer
 from .models import users
 from authn.models import authns
 
@@ -58,7 +58,7 @@ class ProfileMeView(APIView):
             user = users.find_one_userinfo_by_student_number(student_number=student_number)
             
             # Serialize the user with GetProfileMeDto
-            profile_serializer = GetProfileMeDto(user)
+            profile_serializer = GetProfileMeSerializer(user)
             return Response(profile_serializer.data, status=status.HTTP_200_OK)
         
         except users.DoesNotExist:

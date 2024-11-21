@@ -1,13 +1,14 @@
-from authn.authentication import LoginAuthenticate, IsLoginUser, IsAdminUser
+from authn.authentication import LoginAuthenticate, IsLoginUser, IsAdminUser, IsValidRefreshToken
 from authn.serializers import LoginSerializer
 from .jwt import CustomLoginJwtToken
+import jwt
 from django.http import HttpResponse
 
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from django.contrib.auth.hashers import make_password
 
 from drf_yasg.utils       import swagger_auto_schema
@@ -47,10 +48,19 @@ class LoginView(APIView):
         if request.user is not None:
             refresh = CustomLoginJwtToken.get_token(user)
             
-            response = HttpResponse('User Login Success')
-            response.set_cookie('accessToken', str(refresh.access_token))
-            response.set_cookie('refreshToken', str(refresh))
-            return Response({ 'accessToken': str(refresh.access_token), 'refreshToken': str(refresh) })
+            response = Response({
+                'accessToken': str(refresh.access_token),
+                # 'refreshToken': str(refresh)  # 응답 본문에 포함하지 않음
+            }, status=status.HTTP_200_OK)
+            
+
+            response.set_cookie(
+                key='refreshToken',
+                value=str(refresh),
+                samesite='Strict'      # CSRF 방지를 위해 설정    
+            )
+            
+            return response
             
         else:
             return Response({"error": "Invalid Credentials"}, status=400)
@@ -70,13 +80,20 @@ class LogoutView(APIView):
         }
     )
     def post(self, request):
-        response = Response({"message": "Logged out successfully"}, status=205)
-        
-        # 쿠키에서 토큰을 삭제하기 위해 빈 값을 설정하고, 즉시 만료
-        response.delete_cookie('accessToken')
-        response.delete_cookie('refreshToken')
-
-        return response
+        try:
+            refresh_token = request.COOKIES.get('refreshToken')
+            if refresh_token is None:
+                return Response({"error": "No refresh token provided."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            refresh = RefreshToken(refresh_token)
+            refresh.blacklist()
+            
+            response = Response({"message": "Logout successful."}, status=status.HTTP_200_OK)
+            response.delete_cookie('refreshToken')  # 쿠키 삭제
+            return response
+        except Exception as e:
+            logger.error(f"Logout failed: {e}")
+            return Response({"error": "Logout failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 from cabinet.models import cabinets, cabinet_histories, cabinet_positions
 
@@ -162,3 +179,21 @@ class DeleteUserView(APIView):
 
         print(f"Deleted users and authns entries for user_ids: {user_ids}")
         return Response({"message": "User deleted successfully"}, status=204)
+
+class ReIssueAccessTokenView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = [IsValidRefreshToken]  # 필요 시 활성화
+
+    def post(self, request):
+        try:
+            response = Response({
+                'accessToken': str(request.auth.access_token),
+                # 'refreshToken': str(refresh)  # 응답 본문에 포함하지 않음
+            }, status=status.HTTP_200_OK)
+            
+            return response
+
+        except Exception as e:
+            logger.error(f"Unexpected error in AccessTokenView: {str(e)}")
+            return Response({'detail': 'An unexpected error occurred.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        

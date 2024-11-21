@@ -11,8 +11,8 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 from pathlib import Path
+from datetime import timedelta
 import os
-
 import environ
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -127,9 +127,27 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),  # Extend access token to 7 days
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),  # Extend refresh token to 30 days
+    'ROTATE_REFRESH_TOKENS': True,  # Enable refresh token rotation
+    'BLACKLIST_AFTER_ROTATION': False,  # Blacklist old refresh tokens
+    'UPDATE_LAST_LOGIN': False,
     'USER_ID_FIELD': 'student_number',  # Unique field in the custom user model (e.g., username)
     'USER_ID_CLAIM': 'student_number',  # JWT token will contain this claim
+
+    # Optional settings
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,  # Ensure your SECRET_KEY is properly set
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    
 }
+
+#JWT_MIDDLEWARE_EXCLUDED_PATHS = [
+#    r'^/authn/login/$',
+#    #r'^/authn/signup/$',
+#    # 필요한 다른 경로들 추가
+#]
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -196,3 +214,7 @@ LOGGING = {
         },
     },
 }
+
+CORS_ALLOW_CREDENTIALS = True
+
+AUTH_USER_MODEL = 'authn.authns'
