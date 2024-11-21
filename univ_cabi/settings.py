@@ -127,7 +127,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(seconds=1),  # Extend access token to 7 days
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),  # Extend access token to 7 days
     'REFRESH_TOKEN_LIFETIME': timedelta(days=30),  # Extend refresh token to 30 days
     'ROTATE_REFRESH_TOKENS': True,  # Enable refresh token rotation
     'BLACKLIST_AFTER_ROTATION': False,  # Blacklist old refresh tokens

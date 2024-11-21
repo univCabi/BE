@@ -242,8 +242,8 @@ class CabinetSearchDetailView(APIView):
     
 
 class CabinetFloorView(APIView):
-    permission_classes = [IsAuthenticated]
-    authentication_classes = [AllowAny]
+    authentication_classes = [IsAuthenticated]
+    permission_classes = [IsLoginUser]
 
     @swagger_auto_schema(tags=['사물함 정보 조회'], query_serializer=CabinetFloorQueryParamDto, responses={
         200: openapi.Response(
