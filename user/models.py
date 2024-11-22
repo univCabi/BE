@@ -40,7 +40,7 @@ class users(models.Model):
     name = models.CharField(max_length=50)
     affiliation = models.CharField(max_length=50)
     phone_number = models.CharField(max_length=20, unique=True)
-    building_id = models.ForeignKey(buildings, on_delete=models.CASCADE, related_name='building_info')
+    building_id = models.ForeignKey(buildings, on_delete=models.SET_NULL, null=True, related_name='building_info')
     is_visible = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

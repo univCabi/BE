@@ -1,6 +1,6 @@
-insert into user_users (id, name, affiliation, phone_number, building_id_id, is_visible, created_at, updated_at, deleted_at) values (2501, '민영재', '나노융합공학전공', '010-1111-1111', 31, 'true', '6/15/2024', '11/22/2023', null);
-insert into user_users (id, name, affiliation, phone_number, building_id_id, is_visible, created_at, updated_at, deleted_at) values (2502, '김주희', '기술데이터공학전공', '010-2222-2222', 31, 'true', '6/15/2024', '11/22/2023', null);
-insert into user_users (id, name, affiliation, phone_number, building_id_id, is_visible, created_at, updated_at, deleted_at) values (2503, '민웅기', '컴퓨터공학전공', '010-3333-3333', 31, 'true', '6/15/2024', '11/22/2023', null);
+insert into user_users (id, name, affiliation, phone_number, building_id_id, is_visible, created_at, updated_at, deleted_at) values (2501, '민영재', '나노융합공학전공', '010-1111-1111', 31, true, '6/15/2024', '11/22/2023', null);
+insert into user_users (id, name, affiliation, phone_number, building_id_id, is_visible, created_at, updated_at, deleted_at) values (2502, '김주희', '기술데이터공학전공', '010-2222-2222', 31, true, '6/15/2024', '11/22/2023', null);
+insert into user_users (id, name, affiliation, phone_number, building_id_id, is_visible, created_at, updated_at, deleted_at) values (2503, '민웅기', '컴퓨터공학전공', '010-3333-3333', 31, true, '6/15/2024', '11/22/2023', null);
 
 
 insert into authn_authns (user_id_id, student_number, password, role, created_at, updated_at, deleted_at) values (2501, 202111741, 'pbkdf2_sha256$870000$pNPyeyumaZ76Kl2W3xIC9S$NsPQhrBJH6DPUiYT4lNgYrlf/jwBm1breQgVSL3JxRo=', 'ADMIN', '3/1/2024', '4/15/2024', null);
