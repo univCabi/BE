@@ -3,6 +3,7 @@ from enum import Enum
 
 class BuildingNameEnum(Enum):
     가온관 = '가온관'
+    건축관 = '건축관'
     공학1관 = '공학1관'
     공학2관 = '공학2관'
     디자인관 = '디자인관'
