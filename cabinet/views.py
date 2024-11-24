@@ -190,7 +190,11 @@ class CabinetRentView(APIView):
         )
         cabinets.objects.filter(id=cabinet_rent_dto.validated_data.get('cabinetId')).update(status='USING', user_id_id=authns_info.user_id)
 
-        return Response({"message": "Cabinet Rent Successful"}, status=status.HTTP_200_OK)
+        cabinet = cabinets.objects.select_related('building_id', 'user_id').get(id=cabinet_rent_dto.validated_data.get('cabinetId'))
+                # Serialize the cabinet instance
+        cabinet_detail_serializer = CabinetDetailSerializer(cabinet, context={'request': request})
+
+        return Response(cabinet_detail_serializer.data, status=status.HTTP_200_OK)
         
 
 class CabinetReturnView(APIView):
@@ -238,7 +242,13 @@ class CabinetReturnView(APIView):
         cabinet_histories.objects.update(ended_at=timezone.now())
         cabinets.objects.filter(id=cabinet_id).update(status='AVAILABLE', user_id_id=None)
 
-        return Response({"message": "Cabinet Return Successful"}, status=status.HTTP_200_OK)
+        cabinets.objects.filter(id=cabinet_rent_dto.validated_data.get('cabinetId')).update(status='USING', user_id_id=authns_info.user_id)
+
+        cabinet = cabinets.objects.select_related('building_id', 'user_id').get(id=cabinet_rent_dto.validated_data.get('cabinetId'))
+                # Serialize the cabinet instance
+        cabinet_detail_serializer = CabinetDetailSerializer(cabinet, context={'request': request})
+
+        return Response(cabinet_detail_serializer.data, status=status.HTTP_200_OK)
     
 
 #TODO: 추후에 user 정보 기반으로 검색 가능하도록 수정
