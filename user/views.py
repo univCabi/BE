@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 class ProfileMeView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     authentication_classes = [IsLoginUser]
     
     @swagger_auto_schema(
@@ -132,7 +132,6 @@ class ProfileMeView(APIView):
 
 
 class AdminUserCreateView(APIView):
-
     permission_classes = [IsAuthenticated]
     authentication_classes = [IsAdminUser]
 
