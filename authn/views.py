@@ -82,6 +82,7 @@ class LogoutView(APIView):
     def post(self, request):
         try:
             refresh_token = request.COOKIES.get('refreshToken')
+            print("refresh_token", refresh_token)
             if refresh_token is None:
                 return Response({"error": "No refresh token provided."}, status=status.HTTP_400_BAD_REQUEST)
             
@@ -95,7 +96,6 @@ class LogoutView(APIView):
             logger.error(f"Logout failed: {e}")
             return Response({"error": "Logout failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-from cabinet.models import cabinets, cabinet_histories, cabinet_positions
 
 
 import os

@@ -242,8 +242,6 @@ class CabinetReturnView(APIView):
         cabinet_histories.objects.update(ended_at=timezone.now())
         cabinets.objects.filter(id=cabinet_id).update(status='AVAILABLE', user_id_id=None)
 
-        cabinets.objects.filter(id=cabinet_rent_dto.validated_data.get('cabinetId')).update(status='USING', user_id_id=authns_info.user_id)
-
         cabinet = cabinets.objects.select_related('building_id', 'user_id').get(id=cabinet_rent_dto.validated_data.get('cabinetId'))
                 # Serialize the cabinet instance
         cabinet_detail_serializer = CabinetDetailSerializer(cabinet, context={'request': request})
