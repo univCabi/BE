@@ -1,7 +1,7 @@
 from django.db.models import Q
 
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated
 from drf_yasg import openapi
 
 from rest_framework.response import Response
