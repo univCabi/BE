@@ -3,7 +3,6 @@ from datetime import datetime
 from .models import users
 from cabinet.models import cabinets, cabinet_histories
 from authn.models import authns
-from .dto import CabinetFloorInputDTO
 
 from univ_cabi.utils import CamelCaseSerializer
 
@@ -55,13 +54,3 @@ class GetProfileMeSerializer(CamelCaseSerializer):
 class UpdateProfileMeSerializer(serializers.Serializer):
     isVisible = serializers.BooleanField(help_text='이름 공개 여부')
 
-
-class CabinetFloorInputSerializer(serializers.Serializer):
-    building = serializers.CharField(max_length=20)
-    floor = serializers.IntegerField(min_value=1)
-
-    def create_dto(self):
-        return CabinetFloorInputDTO(
-            building=self.validated_data['building'],
-            floor=self.validated_data['floor']
-        )
