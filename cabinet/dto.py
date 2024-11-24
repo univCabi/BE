@@ -1,3 +1,4 @@
+from curses.ascii import isdigit
 from rest_framework import serializers
 from user.models import BuildingNameEnum
 
@@ -56,6 +57,8 @@ class SearchDto(serializers.Serializer):
     def validate_keyword(self, value):
         if value is None:
             raise serializers.ValidationError('검색어를 입력해주세요.')
+        elif len(value) == 1 and value.isdigit():
+            pass
         elif not isinstance(value, int) and len(value) < 2  :
             raise serializers.ValidationError('검색어는 2글자 이상 입력해주세요.')
         return value
@@ -66,6 +69,8 @@ class SearchDetailDto(serializers.Serializer):
     def validate_keyword(self, value):
         if value is None:
             raise serializers.ValidationError('검색어를 입력해주세요.')
+        elif len(value) == 1 and value.isdigit():
+            pass
         elif not isinstance(value, int) and len(value) < 2  :
             raise serializers.ValidationError('검색어는 2글자 이상 입력해주세요.')
         return value
