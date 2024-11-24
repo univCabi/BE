@@ -53,6 +53,7 @@ class CabinetDetailSerializer(serializers.ModelSerializer):
     isVisible = serializers.SerializerMethodField()
     username = serializers.SerializerMethodField()
     isMine = serializers.SerializerMethodField()
+    expiredAt = serializers.SerializerMethodField()
 
     class Meta:
         model = cabinets
@@ -64,7 +65,8 @@ class CabinetDetailSerializer(serializers.ModelSerializer):
             'status',
             'isVisible',
             'username',
-            'isMine'
+            'isMine',
+            'expiredAt'
         ]
 
     def get_isVisible(self, obj):
@@ -96,6 +98,13 @@ class CabinetDetailSerializer(serializers.ModelSerializer):
         if auth_info:
             return student_number == auth_info.student_number
         return False
+    
+    def get_expiredAt(self, obj):
+        """
+        Retrieves the expiration date of the cabinet.
+        """
+        history = cabinet_histories.objects.filter(cabinet_id=obj).first()
+        return history.expired_at if history else None
 
 
 class CabinetHistorySerializer(CamelCaseSerializer):
