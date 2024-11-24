@@ -1,24 +1,32 @@
-from django.http import HttpResponse
+import os
+import sqlparse
+import logging
+from django.conf import settings
+from django.core.management import call_command
+from django.db import connection, transaction
+
 from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.response import Response
+from rest_framework import status
 from drf_yasg.utils       import swagger_auto_schema
 from drf_yasg             import openapi
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from authn.authentication import IsLoginUser
 
+from authn.authentication import IsLoginUser, IsAdminUser
 from .serializers import GetProfileMeSerializer, UpdateProfileMeSerializer
 from .models import users
 from authn.models import authns
+from cabinet.models import buildings
 
+from .dto import AdminUserCreateSerializer, AdminUserDeleteSerializer
 
-from rest_framework.response import Response
-from rest_framework import status
+logger = logging.getLogger(__name__)
 
 
 class ProfileMeView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = [IsLoginUser]
     
-
     @swagger_auto_schema(
         tags=['회원 본인 프로필 조회'],
         request_body=None,
@@ -121,21 +129,84 @@ class ProfileMeView(APIView):
         except Exception as e:
             print(f"Unexpected error: {e}")
             return Response({'error': 'Internal Server Error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class AdminUserCreateView(APIView):
+
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [IsAdminUser]
+
+    @swagger_auto_schema(
+        tags=['관리자 유저 생성'],
+        request_body=AdminUserCreateSerializer,
+        responses={
+            201: openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'message': openapi.Schema(type=openapi.TYPE_STRING, description='User created successfully'),
+                }
+            ),
+            400: openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING, description='학번, 이름, 소속, 전화번호, isVisible 필수 입력값'),
+                }
+            ),
+            500: openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING, description='Internal Server Error'),
+                }
+            )
+        }
+    )
+    def post(self, request):
+
+        create_user_dto = AdminUserCreateSerializer(data=request.data)
+
+        if not create_user_dto.is_valid():
+            return Response(create_user_dto.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        building_id = buildings.objects.get(name=create_user_dto.validated_data['buildingName'], 
+                                            floor=create_user_dto.validated_data['floor'],
+                                            section=create_user_dto.validated_data['section']).id
+        
+        if not building_id:
+            return Response({'error': 'Building not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            users.objects.create(
+                name=create_user_dto.validated_data['name'],
+                affiliation=create_user_dto.validated_data['affiliation'],
+                phone_number=create_user_dto.validated_data['phoneNumber'],
+                building_id=building_id,
+            )
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+            return Response({'error': 'User already exists'}, status=status.HTTP_409_CONFLICT)
+
+        try :
+            user_id = users.objects.filter(
+                name=create_user_dto.validated_data['name'],
+                affiliation=create_user_dto.validated_data['affiliation'],
+                phone_number=create_user_dto.validated_data['phoneNumber'],
+                building_id=building_id,
+            ).first().id
+            authns.objects.create(user_id=user_id ,student_number=create_user_dto.validated_data['studentNumber'],
+                                  password=create_user_dto.validated_data['password'],
+                                  role=create_user_dto.validated_data['role'])
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+            return Response({'error': 'Authn already exists'}, status=status.HTTP_409_BAD_REQUEST)
+        
+        return Response({'message': 'User created successfully'}, status=status.HTTP_201_CREATED)
+
+
+class AdminUserDeleteView(APIView):
+    pass
     
 
-import os
-import glob
-import sqlparse
-from django.conf import settings
-from django.core.management import call_command
-from django.db import connection, transaction
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
 
-import logging
-
-logger = logging.getLogger(__name__)
 
 class MockupView(APIView):
     permission_classes = [AllowAny]  # WARNING: Allowing any user to execute this is insecure. Restrict permissions as needed.

@@ -5,6 +5,7 @@ from authn.models import authns
 from univ_cabi.utils import CamelCaseSerializer
 
 class CabinetInfoSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(read_only=True)
     isVisible = serializers.SerializerMethodField()
     username = serializers.SerializerMethodField()
     isMine = serializers.SerializerMethodField()
@@ -14,7 +15,7 @@ class CabinetInfoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = cabinets
-        fields = ['cabinetNumber', 'cabinetXPos', 'cabinetYPos', 'status', 'isVisible', 'username', 'isMine']
+        fields = ['id', 'cabinetNumber', 'cabinetXPos', 'cabinetYPos', 'status', 'isVisible', 'username', 'isMine']
 
     def get_isVisible(self, obj):
         return obj.user_id.is_visible if obj.user_id else False
@@ -25,6 +26,7 @@ class CabinetInfoSerializer(serializers.ModelSerializer):
     def get_isMine(self, obj):
         request = self.context.get('request')
         return obj.user_id == request.user if obj.user_id else False
+
     
 class CabinetFloorSerializer(serializers.Serializer):
     floor = serializers.IntegerField()
