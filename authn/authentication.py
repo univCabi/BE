@@ -48,16 +48,48 @@ class IsValidRefreshToken(JWTStatelessUserAuthentication):
             return (None, refresh)  # (user, auth)에서 user는 None
         except TokenError as e:
             logger.error(f"Token error: {str(e)}")
-            raise AuthenticationFailed('Invalid refresh token. Please log in again.', code='invalid_refresh_token')
+            raise AuthenticationFailed(
+                detail={
+                    'error': 'Given token not valid for any token type',
+                    'messages': [
+                        {'token_class': 'RefreshToken', 'token_type': 'refresh', 'message': 'Token is invalid or expired'}
+                    ]
+                },
+                code='token_not_valid'
+            )
         except jwt.ExpiredSignatureError:
             logger.warning("Refresh token expired.")
-            raise AuthenticationFailed('Refresh token expired.', code='refresh_token_expired')
+            raise AuthenticationFailed(
+                detail={
+                    'error': 'Given token not valid for any token type',
+                    'messages': [
+                        {'token_class': 'RefreshToken', 'token_type': 'refresh', 'message': 'Token is invalid or expired'}
+                    ]
+                },
+                code='token_not_valid'
+            )
         except jwt.InvalidTokenError:
             logger.error("Invalid refresh token.")
-            raise AuthenticationFailed('Invalid refresh token. Please log in again.', code='invalid_refresh_token')
+            raise AuthenticationFailed(
+                detail={
+                    'error': 'Given token not valid for any token type',
+                    'messages': [
+                        {'token_class': 'RefreshToken', 'token_type': 'refresh', 'message': 'Token is invalid or expired'}
+                    ]
+                },
+                code='token_not_valid'
+            )
         except Exception as e:
             logger.error(f"Unexpected error during RefreshToken creation: {str(e)}")
-            raise AuthenticationFailed('An unexpected error occurred.', code='unexpected_error')
+            raise AuthenticationFailed(
+                detail={
+                    'error': 'Given token not valid for any token type',
+                    'messages': [
+                        {'token_class': 'RefreshToken', 'token_type': 'refresh', 'message': 'Token is invalid or expired'}
+                    ]
+                },
+                code='token_not_valid'
+            )
 
 class IsLoginUser(JWTAuthentication):
     def get_user(self, validated_token):
