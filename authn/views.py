@@ -82,12 +82,8 @@ class LogoutView(APIView):
     def post(self, request):
         try:
             refresh_token = request.COOKIES.get('refreshToken')
-            print("refresh_token", refresh_token)
             if refresh_token is None:
                 return Response({"error": "No refresh token provided."}, status=status.HTTP_400_BAD_REQUEST)
-            
-            refresh = RefreshToken(refresh_token)
-            refresh.blacklist()
             
             response = Response({"message": "Logout successful."}, status=status.HTTP_200_OK)
             response.delete_cookie('refreshToken')  # 쿠키 삭제
