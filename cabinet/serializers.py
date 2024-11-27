@@ -4,6 +4,9 @@ from .models import cabinets, cabinet_positions, cabinet_histories
 from authn.models import authns
 from univ_cabi.utils import CamelCaseSerializer
 
+from user.models import users
+
+
 class CabinetInfoSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(read_only=True)
     isVisible = serializers.SerializerMethodField()
@@ -23,9 +26,11 @@ class CabinetInfoSerializer(serializers.ModelSerializer):
     def get_username(self, obj):
         return obj.user_id.name if obj.user_id else None
 
+    #TODO: Impelment this method
     def get_isMine(self, obj):
         request = self.context.get('request')
-        return obj.user_id == request.user if obj.user_id else False
+        user_id = users.objects.get(id=request.user.id).id
+        return user_id == request.user.id if user_id else False
 
     
 class CabinetFloorSerializer(serializers.Serializer):
