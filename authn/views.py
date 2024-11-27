@@ -177,7 +177,6 @@ class DeleteUserView(APIView):
         return Response({"message": "User deleted successfully"}, status=204)
 
 class ReIssueAccessTokenView(APIView):
-    permission_classes = [AllowAny]
     authentication_classes = [IsValidRefreshToken]  # 필요 시 활성화
 
     def post(self, request):
@@ -191,5 +190,5 @@ class ReIssueAccessTokenView(APIView):
 
         except Exception as e:
             logger.error(f"Unexpected error in AccessTokenView: {str(e)}")
-            return Response({'detail': 'An unexpected error occurred.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": "Unexpected error"}, status=status.HTTP_401_UNAUTHORIZED)
         
