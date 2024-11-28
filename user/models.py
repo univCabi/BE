@@ -1,5 +1,7 @@
 from django.db import models
 from enum import Enum
+from django.utils import timezone
+
 
 class BuildingNameEnum(Enum):
     가온관 = '가온관'
@@ -60,6 +62,5 @@ class users(models.Model):
 
     @classmethod
     def update_user_is_visible_by_student_number(cls, student_number, is_visible):
-        user = cls.objects.get(authn_info__student_number=student_number)
-        user.is_visible = is_visible
-        return user.save()
+        
+        return cls.objects.update(is_visible=is_visible, updated_at=timezone.now())
