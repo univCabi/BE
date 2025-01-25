@@ -389,12 +389,12 @@ class CabinetHistoryView(APIView):
             # Retrieve all cabinet history records associated with this user
             cabinet_history_infos = cabinet_histories.objects.filter(user_id=user.id)
 
-            # Serialize the queryset with many=True
-            cabinet_history_serializer = CabinetHistorySerializer(cabinet_history_infos, many=True)
-
             # Initialize the paginator
             paginator = self.pagination_class()
-            paginated_cabinet_history = paginator.paginate_queryset(cabinet_history_infos, request)
+            paginated_cabinet_history = paginator.paginate_queryset(cabinet_history_infos, request, view=self)
+
+            # Serialize the paginated data
+            cabinet_history_serializer = CabinetHistorySerializer(paginated_cabinet_history, many=True)
 
             # Return the paginated response
             return paginator.get_paginated_response(cabinet_history_serializer.data)
