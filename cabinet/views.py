@@ -1,4 +1,5 @@
 from django.db.models import Q
+from django.db.models import F
 
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
@@ -387,7 +388,9 @@ class CabinetHistoryView(APIView):
             user = users.find_one_userinfo_by_student_number(student_number=student_number)
 
             # Retrieve all cabinet history records associated with this user
-            cabinet_history_infos = cabinet_histories.objects.filter(user_id=user.id)
+            cabinet_history_infos = cabinet_histories.objects.filter(user_id=user.id).order_by(
+                F('ended_at').asc(nulls_first=True)  # None 값이 가장 앞에 오도록 정렬
+            )
 
             # Initialize the paginator
             paginator = self.pagination_class()
