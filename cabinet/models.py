@@ -1,3 +1,4 @@
+from django.utils import timezone
 from django.db import models
 from user.models import users, buildings
 from enum import Enum
@@ -32,6 +33,10 @@ class cabinets(models.Model):
     def __str__(self):
         return str(self.building_id)
     
+    @classmethod
+    def find_one_rented_cabinet_by_cabinet_id(cls, cabinet_id) :
+        return cls.objects.get(id=cabinet_id)
+    
 
 class cabinet_histories(models.Model):
     id = models.AutoField(primary_key=True)
@@ -52,6 +57,12 @@ class cabinet_histories(models.Model):
     @classmethod
     def create_rent_cabinet_history(cls, user_id, cabinet_id, expired_at, status):
         return cls.objects.create(user_id=user_id, cabinet_id=cabinet_id, expired_at=expired_at).update(status='USING')
+    
+    @classmethod
+    def create_return_cabinet_history(cls, user_id, cabinet_id):
+    # ended_at이 None인 기존 이력이 있는지 확인하고 업데이트
+        return cls.objects.filter(user_id=user_id, cabinet_id=cabinet_id, ended_at=None).update(ended_at=timezone.now(), status='AVAILABLE')
+
     
 class cabinet_positions(models.Model) :
     cabinet_id = models.OneToOneField(cabinets, on_delete=models.CASCADE)

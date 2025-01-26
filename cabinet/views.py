@@ -235,16 +235,24 @@ class CabinetReturnView(APIView):
         except cabinets.DoesNotExist:
             return Response({"error": "Cabinet not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        try:
-            cabinet_histories.objects.get(user_id=authns_info.user_id, cabinet_id=cabinet_id, ended_at=None)
-        except cabinet_histories.DoesNotExist:
+        rental_history = cabinet_histories.objects.filter(
+            user_id=authns_info.user_id, 
+            cabinet_id=cabinet_id, 
+            ended_at=None
+        ).first()
+
+        if not rental_history:
             return Response({"error": "Cabinet is not rented"}, status=status.HTTP_400_BAD_REQUEST)
 
-        cabinet_histories.objects.update(ended_at=timezone.now())
+        # ended_at 필드 업데이트
+        rental_history.ended_at = timezone.now()
+        rental_history.save()
+
+        # 사물함 상태 업데이트
         cabinets.objects.filter(id=cabinet_id).update(status='AVAILABLE', user_id_id=None)
 
         cabinet = cabinets.objects.select_related('building_id', 'user_id').get(id=cabinet_rent_dto.validated_data.get('cabinetId'))
-                # Serialize the cabinet instance
+        # Serialize the cabinet instance
         cabinet_detail_serializer = CabinetDetailSerializer(cabinet, context={'request': request})
 
         return Response(cabinet_detail_serializer.data, status=status.HTTP_200_OK)
@@ -389,7 +397,7 @@ class CabinetHistoryView(APIView):
 
             # Retrieve all cabinet history records associated with this user
             cabinet_history_infos = cabinet_histories.objects.filter(user_id=user.id).order_by(
-                F('ended_at').asc(nulls_first=True)  # None 값이 가장 앞에 오도록 정렬
+                F('ended_at').desc(nulls_first=True)  # None 값이 가장 앞에 오도록 정렬
             )
 
             # Initialize the paginator
