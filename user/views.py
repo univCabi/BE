@@ -210,6 +210,48 @@ class AdminUserDeleteView(APIView):
 class MockupView(APIView):
     permission_classes = [AllowAny]  # WARNING: Allowing any user to execute this is insecure. Restrict permissions as needed.
 
+    @swagger_auto_schema(
+        tags=['데이터베이스 초기화'],
+        request_body=None,
+        responses={
+            200: openapi.Response(
+                description="Database flushed and SQL files executed successfully.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'message': openapi.Schema(
+                            type=openapi.TYPE_STRING,
+                            description='Database flushed and SQL files executed successfully.'
+                        )
+                    }
+                )
+            ),
+            400: openapi.Response(
+                description="SQL directory not found or SQL file missing.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'error': openapi.Schema(
+                            type=openapi.TYPE_STRING,
+                            description='SQL directory not found or SQL file missing.'
+                        )
+                    }
+                )
+            ),
+            500: openapi.Response(
+                description="Internal Server Error.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'error': openapi.Schema(
+                            type=openapi.TYPE_STRING,
+                            description='Internal Server Error.'
+                        )
+                    }
+                )
+            ),
+        }
+    )
     def post(self, request):
         try:
             with transaction.atomic():
