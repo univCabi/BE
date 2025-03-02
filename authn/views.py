@@ -18,15 +18,10 @@ from authn.models import authns
 
 
 class LoginView(APIView):
-    ## Query Param EXAMPLE
-    #@swagger_auto_schema(tags=['지정한 데이터의 상세 정보를 불러옵니다.'], query_serializer=TaskSearchSerializer, responses={200: 'Success'})
-    #def get(self, request):
-    #    return HttpResponse('User Login')
     
     permission_classes = [AllowAny]
     authentication_classes = [LoginAuthenticate]
 
-    # Request Body EXAMPLE
     @swagger_auto_schema(    
         tags=['회원 로그인 기능'], 
         request_body=LoginSerializer, 
@@ -38,9 +33,18 @@ class LoginView(APIView):
                     'refreshToken': openapi.Schema(type=openapi.TYPE_STRING, description='Refresh Token')
                 }
             ),
-            400: "로그인 실패",
-            404: "유저 정보가 없습니다.",
-            500: "서버 통신 에러 문구 출력"
+            400: openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING, description='Invalid Credentials')
+                }
+            ),
+            401: openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING, description='Unauthorized')
+                }
+            )
         }
     )
     def post(self, request):
@@ -59,9 +63,7 @@ class LoginView(APIView):
                 value=str(refresh),
                 samesite='Strict'      # CSRF 방지를 위해 설정    
             )
-            
             return response
-            
         else:
             return Response({"error": "Invalid Credentials"}, status=400)
 
@@ -74,9 +76,30 @@ class LogoutView(APIView):
         tags=['회원 로그아웃 기능'], 
         request_body=None,
         responses={
-            200: "로그아웃 성공",
-            401: "로그인 페이지로 이동",
-            500: "로그인 페이지로 이동"
+            200: openapi.Response(
+                description="로그아웃 성공",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'message': openapi.Schema(type=openapi.TYPE_STRING, description='Logout successful.')
+                    })
+            ),
+            400: openapi.Response(
+                description="로그아웃 실패",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'error': openapi.Schema(type=openapi.TYPE_STRING, description='No refresh token provided.')
+                    })
+            ),
+            500: openapi.Response(
+                description="로그아웃 실패",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'error': openapi.Schema(type=openapi.TYPE_STRING, description='Logout failed.')
+                    })
+            )
         }
     )
     def post(self, request):
@@ -111,7 +134,40 @@ class CreateUserView(APIView):
     permission_classes = [AllowAny]
     #authentication_classes = []
 
-    #@swagger_auto_schema(tags=['회원가입을 합니다.'], request_body=LoginSerializer)
+    @swagger_auto_schema(tags=['회원가입을 합니다.'], request_body=LoginSerializer, responses={
+        200: openapi.Response(
+            description="성공적으로 조회되었습니다.",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'message': openapi.Schema(type=openapi.TYPE_STRING, description='Database flushed and SQL files executed successfully.')
+                })
+        ),
+        400: openapi.Response(
+            description="SQL file not found.",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING, description='SQL file not found: {sql_file}')
+                })
+        ),
+        404: openapi.Response(
+            description="Building with the specified name and floor not found.",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING, description='SQL directory not found at {sql_dir}.')
+                })
+        ),
+        500: openapi.Response(
+            description="Unexpected error executing SQL files.",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING, description='Error executing SQL files: {e}')
+                })
+        )
+        })
     def post(self, request):
         try:
                 # Define the path to the SQL files
@@ -120,7 +176,7 @@ class CreateUserView(APIView):
                 if not os.path.isdir(sql_dir):
                     error_msg = f"SQL directory not found at {sql_dir}."
                     logger.error(error_msg)
-                    return Response({'error': error_msg}, status=status.HTTP_400_BAD_REQUEST)
+                    return Response({'error': error_msg}, status=status.HTTP_404_NOT_FOUND)
 
                 # Specify the ordered list of SQL files
                 ordered_sql_files = [
@@ -163,7 +219,16 @@ class DeleteUserView(APIView):
     permission_classes = [AllowAny]
     #authentication_classes = []
 
-    #@swagger_auto_schema(tags=['회원탈퇴를 합니다.'], request_body=LoginSerializer)
+    @swagger_auto_schema(tags=['회원탈퇴를 합니다.'], responses={
+        204: openapi.Response(
+            description="성공적으로 삭제되었습니다.",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'message': openapi.Schema(type=openapi.TYPE_STRING, description='User deleted successfully.')
+                })
+        )
+        })
     def post(self, request):
         user_ids = [2501, 2502, 2503]
 
@@ -179,6 +244,28 @@ class DeleteUserView(APIView):
 class ReIssueAccessTokenView(APIView):
     authentication_classes = [IsValidRefreshToken]  # 필요 시 활성화
 
+    @swagger_auto_schema(
+        tags=['Access Token 재발급'],
+        request_body=None,
+        responses={
+            200: openapi.Response(
+                description="Access Token 재발급 성공",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'accessToken': openapi.Schema(type=openapi.TYPE_STRING, description='Access Token')
+                    })
+            ),
+            401: openapi.Response(
+                description="Access Token 재발급 실패",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'error': openapi.Schema(type=openapi.TYPE_STRING, description='Unexpected error')
+                    })
+            )
+        }
+    )
     def post(self, request):
         try:
             response = Response({
