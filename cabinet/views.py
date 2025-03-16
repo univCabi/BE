@@ -801,8 +801,8 @@ class CabinetAdminChangeStatusView(APIView, AdminRequiredMixin):
                 'cabinetId': openapi.Schema(type=openapi.TYPE_INTEGER, description='상태를 변경할 사물함 ID'),
                 'newStatus': openapi.Schema(
                     type=openapi.TYPE_STRING, 
-                    description='새 상태 (AVAILABLE, USING, BROKEN, MAINTENANCE)',
-                    enum=['AVAILABLE', 'USING', 'BROKEN', 'MAINTENANCE']
+                    description='새 상태 (AVAILABLE, USING, BROKEN, OVERDUE)', # 상태 겨경
+                    enum=['AVAILABLE', 'USING', 'BROKEN', 'OVERDUE']
                 ),
             }
         ),
@@ -848,7 +848,7 @@ class CabinetAdminChangeStatusView(APIView, AdminRequiredMixin):
         new_status = request.data.get('newStatus')
         
         # 상태 값 검증
-        valid_statuses = ['AVAILABLE', 'USING', 'BROKEN', 'MAINTENANCE']
+        valid_statuses = ['AVAILABLE', 'USING', 'BROKEN', 'OVERDUE']
         if new_status not in valid_statuses:
             return Response(
                 {"error": f"유효하지 않은 상태입니다. {valid_statuses} 중 하나여야 합니다"},
