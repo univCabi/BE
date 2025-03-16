@@ -26,6 +26,7 @@ from .dto import (
     SearchDto
 )
 from authn.authentication import IsLoginUser
+from authn.admin import AdminRequiredMixin
 
 logger = logging.getLogger(__name__)
 
@@ -618,3 +619,288 @@ class CabinetFindAll(APIView):
         
         # 페이지네이션 응답 반환
         return paginator.get_paginated_response(data)
+    
+
+class CabinetAdminReturnView(APIView, AdminRequiredMixin):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [IsLoginUser]
+
+    @swagger_auto_schema(
+        tags=['사물함 관리 (관리자)'],
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'cabinetId': openapi.Schema(type=openapi.TYPE_INTEGER, description='반납할 사물함 ID'),
+                'studentNumber': openapi.Schema(type=openapi.TYPE_STRING, description='반납 처리할 사용자의 학번')
+            },
+            required=['cabinetId']  # cabinetId만 필수
+        ),
+        responses={
+            200: openapi.Response(
+                description="사물함 반납 성공",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'message': openapi.Schema(type=openapi.TYPE_STRING),
+                        'cabinets': openapi.Schema(
+                            type=openapi.TYPE_ARRAY,
+                            items=openapi.Schema(
+                                type=openapi.TYPE_OBJECT,
+                                properties={
+                                    'id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                                    'building': openapi.Schema(type=openapi.TYPE_STRING),
+                                    'floor': openapi.Schema(type=openapi.TYPE_INTEGER),
+                                    'cabinetNumber': openapi.Schema(type=openapi.TYPE_STRING)
+                                }
+                            )
+                        )
+                    }
+                )
+            ),
+            400: openapi.Response(
+                description="잘못된 요청",
+                schema=openapi.Schema(type=openapi.TYPE_OBJECT, properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING)
+                })
+            ),
+            403: openapi.Response(
+                description="권한 없음",
+                schema=openapi.Schema(type=openapi.TYPE_OBJECT, properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING)
+                })
+            ),
+            404: openapi.Response(
+                description="사물함 또는 사용자를 찾을 수 없음",
+                schema=openapi.Schema(type=openapi.TYPE_OBJECT, properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING)
+                })
+            ),
+        }
+    )
+    def post(self, request):
+        # 관리자 권한 확인
+        admin_check = self.check_admin_permission(request)
+        if admin_check:
+            return admin_check
+
+        cabinet_id = request.data.get('cabinetId')
+        student_number = request.data.get('studentNumber')
+        
+        if not cabinet_id and not student_number:
+            return Response(
+                {"error": "cabinetId 또는 studentNumber 중 하나는 필수입니다"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        returned_cabinets = []
+        
+        # 특정 학번의 사용자가 대여 중인 사물함 반납
+        if student_number:
+            try:
+                auth_user = authns.objects.get(student_number=student_number)
+                user = auth_user.user_id
+                
+                # 해당 사용자의 모든 활성 대여 이력 종료
+                active_histories = cabinet_histories.objects.filter(user_id=user, ended_at=None)
+                
+                if not active_histories.exists():
+                    return Response(
+                        {"error": f"학번 {student_number}의 사용자는 현재 대여 중인 사물함이 없습니다"},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+                
+                for history in active_histories:
+                    history.ended_at = timezone.now()
+                    history.save()
+                    
+                    # 사물함 정보 가져오기 (update하기 전에)
+                    cabinet = history.cabinet_id
+                    cabinet_info = {
+                        'id': cabinet.id,
+                        'building': cabinet.building_id.name if cabinet.building_id else None,
+                        'floor': cabinet.building_id.floor if cabinet.building_id else None,
+                        'cabinetNumber': cabinet.cabinet_number
+                    }
+                    
+                    # update() 메서드 사용하여 저장 (save() 대신)
+                    cabinets.objects.filter(id=cabinet.id).update(
+                        status='AVAILABLE',
+                        user_id=None,
+                        updated_at=timezone.now()  # 명시적으로 업데이트 시간 설정
+                    )
+                    
+                    returned_cabinets.append(cabinet_info)
+                    
+            except authns.DoesNotExist:
+                return Response(
+                    {"error": f"학번 {student_number}에 해당하는 사용자를 찾을 수 없습니다"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        
+        # 특정 사물함 반납
+        elif cabinet_id:
+            try:
+                cabinet = cabinets.objects.get(id=cabinet_id)
+                
+                if cabinet.status != 'USING' or not cabinet.user_id:
+                    return Response(
+                        {"error": "이 사물함은 현재 대여 중이 아닙니다"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                # 활성 대여 이력 종료
+                active_history = cabinet_histories.objects.filter(
+                    cabinet_id=cabinet, 
+                    ended_at=None
+                ).first()
+                
+                if active_history:
+                    active_history.ended_at = timezone.now()
+                    active_history.save()
+                
+                # 사물함 정보 저장 (update 전)
+                cabinet_info = {
+                    'id': cabinet.id,
+                    'building': cabinet.building_id.name if cabinet.building_id else None,
+                    'floor': cabinet.building_id.floor if cabinet.building_id else None,
+                    'cabinetNumber': cabinet.cabinet_number
+                }
+                
+                # update() 메서드 사용하여 저장 (save() 대신)
+                cabinets.objects.filter(id=cabinet_id).update(
+                    status='AVAILABLE',
+                    user_id=None,
+                    updated_at=timezone.now()  # 명시적으로 업데이트 시간 설정
+                )
+                
+                returned_cabinets.append(cabinet_info)
+                
+            except cabinets.DoesNotExist:
+                return Response(
+                    {"error": f"ID {cabinet_id}에 해당하는 사물함을 찾을 수 없습니다"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        
+        return Response({
+            "message": "사물함 반납 처리가 완료되었습니다",
+            "cabinets": returned_cabinets
+        }, status=status.HTTP_200_OK)
+
+
+# 2. 관리자 사물함 상태 변경 API
+class CabinetAdminChangeStatusView(APIView, AdminRequiredMixin):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [IsLoginUser]
+
+    @swagger_auto_schema(
+        tags=['사물함 관리 (관리자)'],
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['cabinetId', 'newStatus'],
+            properties={
+                'cabinetId': openapi.Schema(type=openapi.TYPE_INTEGER, description='상태를 변경할 사물함 ID'),
+                'newStatus': openapi.Schema(
+                    type=openapi.TYPE_STRING, 
+                    description='새 상태 (AVAILABLE, USING, BROKEN, MAINTENANCE)',
+                    enum=['AVAILABLE', 'USING', 'BROKEN', 'MAINTENANCE']
+                ),
+            }
+        ),
+        responses={
+            200: openapi.Response(
+                description="사물함 상태 변경 성공",
+                schema=CabinetDetailSerializer
+            ),
+            400: openapi.Response(
+                description="잘못된 요청",
+                schema=openapi.Schema(type=openapi.TYPE_OBJECT, properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING)
+                })
+            ),
+            403: openapi.Response(
+                description="권한 없음",
+                schema=openapi.Schema(type=openapi.TYPE_OBJECT, properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING)
+                })
+            ),
+            404: openapi.Response(
+                description="사물함을 찾을 수 없음",
+                schema=openapi.Schema(type=openapi.TYPE_OBJECT, properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING)
+                })
+            ),
+        }
+    )
+    def post(self, request):
+        # 관리자 권한 확인
+        admin_check = self.check_admin_permission(request)
+        if admin_check:
+            return admin_check
+            
+        # 필수 파라미터 확인
+        if 'cabinetId' not in request.data or 'newStatus' not in request.data:
+            return Response(
+                {"error": "cabinetId와 newStatus는 필수입니다"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        cabinet_id = request.data.get('cabinetId')
+        new_status = request.data.get('newStatus')
+        
+        # 상태 값 검증
+        valid_statuses = ['AVAILABLE', 'USING', 'BROKEN', 'MAINTENANCE']
+        if new_status not in valid_statuses:
+            return Response(
+                {"error": f"유효하지 않은 상태입니다. {valid_statuses} 중 하나여야 합니다"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        # 사물함 조회
+        try:
+            cabinet = cabinets.objects.get(id=cabinet_id)
+        except cabinets.DoesNotExist:
+            return Response(
+                {"error": f"ID {cabinet_id}에 해당하는 사물함을 찾을 수 없습니다"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # 상태 변경 처리
+        old_status = cabinet.status
+        user_id = cabinet.user_id
+        
+        # 'USING' 상태로 변경하는데 사용자가 연결되어 있지 않은 경우
+        if new_status == 'USING' and not user_id:
+            return Response(
+                {"error": "사물함을 'USING' 상태로 변경하려면 먼저 사용자를 지정해야 합니다"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        # 'AVAILABLE' 상태로 변경하는데 사용자가 연결되어 있는 경우
+        if new_status == 'AVAILABLE' and user_id:
+            # 활성 대여 이력 종료
+            active_history = cabinet_histories.objects.filter(
+                cabinet_id=cabinet, 
+                ended_at=None
+            ).first()
+            
+            if active_history:
+                active_history.ended_at = timezone.now()
+                active_history.save()
+                
+            # update() 메서드를 사용하여 저장
+            cabinets.objects.filter(id=cabinet_id).update(
+                status=new_status,
+                user_id=None,
+                updated_at=timezone.now()
+            )
+        else:
+            # 일반적인 상태 업데이트
+            cabinets.objects.filter(id=cabinet_id).update(
+                status=new_status,
+                updated_at=timezone.now()
+            )
+            
+        # 업데이트된 사물함 정보 반환 (다시 가져오기)
+        updated_cabinet = cabinets.objects.select_related('building_id', 'user_id').get(id=cabinet_id)
+        cabinet_detail_serializer = CabinetDetailSerializer(updated_cabinet, context={'request': request})
+        return Response(cabinet_detail_serializer.data, status=status.HTTP_200_OK)

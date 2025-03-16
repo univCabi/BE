@@ -13,4 +13,6 @@ urlpatterns = [
 
     path('all', views.CabinetFindAll.as_view(), name='all'),
 
+    path('admin/return', views.CabinetAdminReturnView.as_view(), name='admin_return'),
+    path('admin/change/status', views.CabinetAdminChangeStatusView.as_view(), name='admin_change_status'),
 ]
