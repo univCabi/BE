@@ -29,6 +29,12 @@ from authn.authentication import IsLoginUser
 
 logger = logging.getLogger(__name__)
 
+# 페이지네이션 클래스 정의
+class CabinetPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'pageSize'
+    max_page_size = 100
+
 class CabinetFloorView(APIView):
     permission_classes = [IsAuthenticated]
     authentication_classes = [IsLoginUser]
@@ -338,7 +344,9 @@ class CabinetSearchView(APIView):
 class CabinetSearchDetailView(APIView):
     permission_classes = [IsAuthenticated]
     authentication_classes = [IsLoginUser]
-    pagination_class = PageNumberPagination
+
+    # 페이지네이션 클래스 인스턴스 생성
+    pagination_class = CabinetPagination
 
     @swagger_auto_schema(
         tags=['사물함 구체적인 검색 결과'],
@@ -396,33 +404,71 @@ class CabinetSearchDetailView(APIView):
             )
         }
     )
+ 
     def get(self, request):
         search_detail_dto = SearchDetailDto(data=request.query_params)
+
         if not search_detail_dto.is_valid():
             return Response(search_detail_dto.errors, status=status.HTTP_400_BAD_REQUEST)
+
         keyword = search_detail_dto.validated_data.get('keyword')
+
+        # Q 객체를 사용하여 여러 필드에 대한 OR 조건 설정
         if keyword.isdigit():
             q_objects = Q(cabinet_number__exact=keyword)
         else:
             q_objects = Q(building_id__name__contains=keyword)
+
+        # 조인된 buildings 정보도 함께 가져오기 위해 select_related 사용
         cabinet_info = cabinets.objects.filter(q_objects).select_related('building_id')
+
+        print("cabinet_info: ", cabinet_info)
+        
+        # 페이지네이션 인스턴스 생성
         paginator = self.pagination_class()
-        paginated_cabinets = paginator.paginate_queryset(cabinet_info, request)
-        data = [
-            {
-                "building": cabinet.building_id.name if cabinet.building_id else None,
-                "floor": cabinet.building_id.floor if cabinet.building_id else None,
-                "cabinetNumber": cabinet.cabinet_number,
-            }
-            for cabinet in paginated_cabinets
-        ]
-        return paginator.get_paginated_response(data)
+        
+        try:
+            # 페이지네이션 수행
+            paginated_cabinets = paginator.paginate_queryset(cabinet_info, request)
+            
+            # 필요한 정보만 직렬화하여 반환
+            data = [
+                {
+                    "building": cabinet.building_id.name if cabinet.building_id else None,
+                    "floor": cabinet.building_id.floor if cabinet.building_id else None,
+                    "cabinetNumber": cabinet.cabinet_number,
+                }
+                for cabinet in paginated_cabinets
+            ]
+            
+            return paginator.get_paginated_response(data)
+            
+        except Exception as e:
+            # 디버깅을 위한 오류 출력
+            print(f"Pagination error: {str(e)}")
+            
+            # 페이지네이션 실패 시 전체 결과 반환
+            data = [
+                {
+                    "building": cabinet.building_id.name if cabinet.building_id else None,
+                    "floor": cabinet.building_id.floor if cabinet.building_id else None,
+                    "cabinetNumber": cabinet.cabinet_number,
+                }
+                for cabinet in cabinet_info[:30]  # 안전을 위해 최대 30개만 반환
+            ]
+            
+            return Response({
+                "count": len(cabinet_info),
+                "next": None,
+                "previous": None,
+                "results": data
+            })
 
 
 class CabinetHistoryView(APIView):
     permission_classes = [IsAuthenticated]
     authentication_classes = [IsLoginUser]
-    pagination_class = PageNumberPagination
+    pagination_class = CabinetPagination
 
     @swagger_auto_schema(
         tags=['사물함 이력 조회'],
@@ -460,3 +506,43 @@ class CabinetHistoryView(APIView):
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+class CabinetFindAll(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [IsLoginUser]
+    
+    pagination_class = CabinetPagination
+
+    @swagger_auto_schema(
+        tags=['사물함 전체 조회'],
+        responses={
+            200: openapi.Response(
+                description="성공적으로 조회되었습니다.",
+                schema=CabinetFloorSerializer
+            ),
+            404: openapi.Response(
+                description="No cabinets found.",
+                schema=openapi.Schema(type=openapi.TYPE_OBJECT, properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING)
+                })
+            ),
+        }
+    )
+    def get(self, request):
+        cabinets_qs = cabinets.objects.select_related('user_id', 'building_id').all()
+        if not cabinets_qs.exists():
+            return Response(
+                {"error": "No cabinets found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        cabinet_floor_info = {
+            "floor": "전체",
+            "section": "전체",
+            "floorWidth": 0,
+            "floorHeight": 0,
+            "cabinets": cabinets_qs
+        }
+        cabinet_floor_serializer = CabinetFloorSerializer(cabinet_floor_info, context={'request': request})
+        return Response(cabinet_floor_serializer.data, status=status.HTTP_200_OK)
+

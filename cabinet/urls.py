@@ -11,5 +11,6 @@ urlpatterns = [
     path('search/detail', views.CabinetSearchDetailView.as_view(), name='search_detail'),
     path('history', views.CabinetHistoryView.as_view(), name='history'),
 
+    path('all', views.CabinetFindAll.as_view(), name='all'),
 
 ]
