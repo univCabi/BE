@@ -516,10 +516,44 @@ class CabinetFindAll(APIView):
 
     @swagger_auto_schema(
         tags=['사물함 전체 조회'],
+        manual_parameters=[
+            openapi.Parameter(
+                'page', 
+                openapi.IN_QUERY, 
+                type=openapi.TYPE_INTEGER, 
+                description='페이지 번호', 
+                required=False
+            ),
+            openapi.Parameter(
+                'pageSize', 
+                openapi.IN_QUERY, 
+                type=openapi.TYPE_INTEGER, 
+                description='페이지 크기', 
+                required=False
+            ),
+        ],
         responses={
             200: openapi.Response(
                 description="성공적으로 조회되었습니다.",
-                schema=CabinetFloorSerializer
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'count': openapi.Schema(type=openapi.TYPE_INTEGER),
+                        'next': openapi.Schema(type=openapi.TYPE_STRING, nullable=True),
+                        'previous': openapi.Schema(type=openapi.TYPE_STRING, nullable=True),
+                        'results': openapi.Schema(
+                            type=openapi.TYPE_ARRAY,
+                            items=openapi.Schema(
+                                type=openapi.TYPE_OBJECT,
+                                properties={
+                                    'building': openapi.Schema(type=openapi.TYPE_STRING),
+                                    'floor': openapi.Schema(type=openapi.TYPE_INTEGER),
+                                    'cabinetNumber': openapi.Schema(type=openapi.TYPE_STRING)
+                                }
+                            )
+                        )
+                    }
+                )
             ),
             404: openapi.Response(
                 description="No cabinets found.",
@@ -530,19 +564,57 @@ class CabinetFindAll(APIView):
         }
     )
     def get(self, request):
-        cabinets_qs = cabinets.objects.select_related('user_id', 'building_id').all()
-        if not cabinets_qs.exists():
+        # 필터링 파라미터 가져오기
+        floor = request.query_params.get('floor')
+        cabinet_number = request.query_params.get('cabinetNumber')
+        building = request.query_params.get('building')
+        
+        # 기본 쿼리셋
+        queryset = cabinets.objects.select_related('building_id')
+        
+        # 필터링 적용
+        filters = Q()
+        
+        if floor:
+            try:
+                floor_int = int(floor)
+                filters &= Q(building_id__floor=floor_int)
+            except ValueError:
+                return Response(
+                    {"error": "Floor must be an integer."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        if cabinet_number:
+            filters &= Q(cabinet_number__icontains=cabinet_number)
+        
+        if building:
+            filters &= Q(building_id__name__icontains=building)
+        
+        # 필터가 있는 경우에만 적용
+        if filters:
+            queryset = queryset.filter(filters)
+        
+        # 결과가 없는 경우 404 반환
+        if not queryset.exists():
             return Response(
                 {"error": "No cabinets found."},
                 status=status.HTTP_404_NOT_FOUND
             )
-        cabinet_floor_info = {
-            "floor": "전체",
-            "section": "전체",
-            "floorWidth": 0,
-            "floorHeight": 0,
-            "cabinets": cabinets_qs
-        }
-        cabinet_floor_serializer = CabinetFloorSerializer(cabinet_floor_info, context={'request': request})
-        return Response(cabinet_floor_serializer.data, status=status.HTTP_200_OK)
-
+        
+        # 페이지네이션 적용
+        paginator = self.pagination_class()
+        paginated_cabinets = paginator.paginate_queryset(queryset, request)
+        
+        # building, floor, cabinetNumber 데이터만 추출
+        data = [
+            {
+                "building": cabinet.building_id.name if cabinet.building_id else None,
+                "floor": cabinet.building_id.floor if cabinet.building_id else None,
+                "cabinetNumber": cabinet.cabinet_number,
+            }
+            for cabinet in paginated_cabinets
+        ]
+        
+        # 페이지네이션 응답 반환
+        return paginator.get_paginated_response(data)
