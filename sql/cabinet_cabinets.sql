@@ -1,6 +1,6 @@
 insert into cabinet_cabinets (id, user_id_id, building_id_id, cabinet_number, status, payable, created_at, updated_at, deleted_at) values (1, 2, 1, 1, 'USING', 'FREE', '5/17/2024', '2/24/2024', '8/6/2024');
 insert into cabinet_cabinets (id, user_id_id, building_id_id, cabinet_number, status, payable, created_at, updated_at, deleted_at) values (2, null, 1, 2, 'BROKEN', 'FREE', '11/6/2024', '8/24/2024', '11/21/2023');
-insert into cabinet_cabinets (id, user_id_id, building_id_id, cabinet_number, status, payable, created_at, updated_at, deleted_at) values (3, 4, 1, 3, 'OVERDUE', 'FREE', '8/29/2024', '9/15/2024', '11/7/2024');
+insert into cabinet_cabinets (id, user_id_id, building_id_id, cabinet_number, status, payable, created_at, updated_at, deleted_at) values (3, 4, 1, 3, 'USING', 'FREE', '8/29/2024', '9/15/2024', '11/7/2024');
 insert into cabinet_cabinets (id, user_id_id, building_id_id, cabinet_number, status, payable, created_at, updated_at, deleted_at) values (4, null, 1, 4, 'AVAILABLE', 'FREE', '12/2/2023', '9/17/2024', '11/19/2023');
 insert into cabinet_cabinets (id, user_id_id, building_id_id, cabinet_number, status, payable, created_at, updated_at, deleted_at) values (5, null, 1, 5, 'AVAILABLE', 'FREE', '6/18/2024', '4/29/2024', '4/7/2024');
 insert into cabinet_cabinets (id, user_id_id, building_id_id, cabinet_number, status, payable, created_at, updated_at, deleted_at) values (6, null, 1, 6, 'AVAILABLE', 'FREE', '12/15/2023', '6/11/2024', '6/24/2024');
