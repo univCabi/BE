@@ -3,7 +3,6 @@ from django.db import models
 from user.models import users, buildings
 from enum import Enum
 
-
 class CabinetStatusEnum(Enum):
     BROKEN = 'BROKEN'
     AVAILABLE = 'AVAILABLE'
