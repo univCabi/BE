@@ -409,7 +409,7 @@ class CabinetSearchDetailView(APIView):
             )
         }
     )
- 
+
     def get(self, request):
         search_detail_dto = SearchDetailDto(data=request.query_params)
 
@@ -831,6 +831,7 @@ class CabinetAdminReturnView(APIView, AdminRequiredMixin):
 
 
 # 2. 관리자 사물함 상태 변경 API (다중 처리 지원)
+#TODO: dto, serializer 추가
 class CabinetAdminChangeStatusView(APIView, AdminRequiredMixin):
     permission_classes = [IsAuthenticated]
     authentication_classes = [IsLoginUser]
@@ -851,6 +852,11 @@ class CabinetAdminChangeStatusView(APIView, AdminRequiredMixin):
                     description='새 상태 (AVAILABLE, USING, BROKEN, OVERDUE)',
                     enum=['AVAILABLE', 'USING', 'BROKEN', 'OVERDUE']
                 ),
+                'reason': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    description='사물함 상태 변경 이유',
+                    nullable=True
+                )
             }
         ),
         responses={
@@ -869,7 +875,8 @@ class CabinetAdminChangeStatusView(APIView, AdminRequiredMixin):
                                     'building': openapi.Schema(type=openapi.TYPE_STRING),
                                     'floor': openapi.Schema(type=openapi.TYPE_INTEGER),
                                     'cabinetNumber': openapi.Schema(type=openapi.TYPE_STRING),
-                                    'status': openapi.Schema(type=openapi.TYPE_STRING)
+                                    'status': openapi.Schema(type=openapi.TYPE_STRING),
+                                    'reason': openapi.Schema(type=openapi.TYPE_STRING, nullable=True)
                                 }
                             )
                         )
@@ -911,7 +918,13 @@ class CabinetAdminChangeStatusView(APIView, AdminRequiredMixin):
             
         cabinet_ids = request.data.get('cabinetId')
         new_status = request.data.get('newStatus')
+        reason = request.data.get('reason')
         
+        if new_status == 'BROKEN' and not reason:
+            return Response(
+                {"error": "사물함 상태를 'BROKEN'으로 변경할 때는 reason 필드가 필수입니다"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         # cabinetId 유효성 검증 (배열인지 확인)
         if not isinstance(cabinet_ids, list):
             return Response(
@@ -963,14 +976,22 @@ class CabinetAdminChangeStatusView(APIView, AdminRequiredMixin):
                     cabinets.objects.filter(id=cabinet_id).update(
                         status=new_status,
                         user_id=None,
+                        reason=reason if reason else None,  # reason 추가
                         updated_at=timezone.now()
                     )
                 else:
                     # 일반적인 상태 업데이트
-                    cabinets.objects.filter(id=cabinet_id).update(
-                        status=new_status,
-                        updated_at=timezone.now()
-                    )
+                    update_data = {
+                        'status': new_status,
+                        'updated_at': timezone.now()
+                    }
+                    
+                    # reason이 있으면 추가
+                    if reason is not None:
+                        update_data['reason'] = reason
+                    
+                    # 업데이트 실행
+                    cabinets.objects.filter(id=cabinet_id).update(**update_data)
                 
                 # 업데이트된 사물함 정보 저장
                 updated_cabinet = cabinets.objects.select_related('building_id', 'user_id').get(id=cabinet_id)
@@ -1141,7 +1162,10 @@ class CabinetStatusSearchView(APIView):
                                             'name': openapi.Schema(type=openapi.TYPE_STRING)
                                         },
                                         nullable=True
-                                    )
+                                    ),
+                                    'reason': openapi.Schema(type=openapi.TYPE_STRING, nullable=True),
+                                    'rentalStartDate' : openapi.Schema(type=openapi.TYPE_STRING, nullable=True),
+                                    'overDate' : openapi.Schema(type=openapi.TYPE_STRING, nullable=True),
                                 }
                             )
                         )
@@ -1207,6 +1231,7 @@ class CabinetStatusSearchView(APIView):
                 } if hasattr(cabinet, 'cabinet_positions') and cabinet.cabinet_positions else None,
                 'cabinetNumber': cabinet.cabinet_number,
                 'status': cabinet.status,
+                'reason' : cabinet.reason,
                 'user': None
             }
             
@@ -1224,10 +1249,12 @@ class CabinetStatusSearchView(APIView):
                         cabinet_id=cabinet,
                         ended_at=None
                     ).first()
+
+                    print("status_param:", status_param)
                     
                     if rental_history:
                         cabinet_data['rentalStartDate'] = rental_history.created_at
-                        cabinet_data['expiryDate'] = rental_history.expired_at
+                        cabinet_data['overDate'] = rental_history.expired_at
             
             results.append(cabinet_data)
             
