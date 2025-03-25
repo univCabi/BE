@@ -1152,6 +1152,7 @@ class CabinetStatusSearchView(APIView):
                                     'id': openapi.Schema(type=openapi.TYPE_INTEGER),
                                     'building': openapi.Schema(type=openapi.TYPE_STRING),
                                     'floor': openapi.Schema(type=openapi.TYPE_INTEGER),
+                                    'section': openapi.Schema(type=openapi.TYPE_STRING),
                                     'position': openapi.Schema(type=openapi.TYPE_STRING),
                                     'cabinetNumber': openapi.Schema(type=openapi.TYPE_STRING),
                                     'status': openapi.Schema(type=openapi.TYPE_STRING),
@@ -1225,6 +1226,7 @@ class CabinetStatusSearchView(APIView):
                 'id': cabinet.id,
                 'building': cabinet.building_id.name if cabinet.building_id else None,
                 'floor': cabinet.building_id.floor if cabinet.building_id else None,
+                'section': cabinet.section,
                 'position': {
                     'x': cabinet.cabinet_positions.cabinet_x_pos,
                     'y': cabinet.cabinet_positions.cabinet_y_pos
