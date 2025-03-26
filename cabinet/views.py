@@ -1234,7 +1234,7 @@ class CabinetStatusSearchView(APIView):
                 'cabinetNumber': cabinet.cabinet_number,
                 'status': cabinet.status,
                 'reason' : cabinet.reason,
-                'user': None
+                'user': None,
             }
             
             # 사용자 정보 추가 (사용중인 경우)
@@ -1246,7 +1246,7 @@ class CabinetStatusSearchView(APIView):
                 }
                 
                 # 연체된 경우 대여 시작일, 만료일 추가
-                if status_param == 'OVERDUE':
+                if status_param == 'OVERDUE ':
                     rental_history = cabinet_histories.objects.filter(
                         cabinet_id=cabinet,
                         ended_at=None
@@ -1258,7 +1258,16 @@ class CabinetStatusSearchView(APIView):
                     if rental_history:
                         cabinet_data['rentalStartDate'] = rental_history.created_at
                         cabinet_data['overDate'] = rental_history.expired_at
-            
+                elif status_param == "BROKEN":
+                    # select_related를 사용하여 관련 객체까지 함께 로드
+                    rental_history = cabinet_histories.objects.select_related('cabinet_id').filter(
+                        cabinet_id=cabinet,
+                        ended_at=None
+                    ).first()
+                    
+                    if rental_history:
+                        cabinet_data['rentalStartDate'] = rental_history.created_at
+                        cabinet_data['brokenDate'] = rental_history.cabinet_id.updated_at
             results.append(cabinet_data)
             
         return paginator.get_paginated_response(results)
