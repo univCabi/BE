@@ -1252,7 +1252,8 @@ class CabinetStatusSearchView(APIView):
                         ended_at=None
                     ).first()
 
-                    print("status_param:", status_param)
+                    #print("status_param:", status_param)
+                    #print("rental_history:", rental_history)
                     
                     if rental_history:
                         cabinet_data['rentalStartDate'] = rental_history.created_at
