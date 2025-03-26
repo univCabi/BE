@@ -1226,7 +1226,7 @@ class CabinetStatusSearchView(APIView):
                 'id': cabinet.id,
                 'building': cabinet.building_id.name if cabinet.building_id else None,
                 'floor': cabinet.building_id.floor if cabinet.building_id else None,
-                'section': cabinet.section,
+                'section': cabinet.building_id.section,
                 'position': {
                     'x': cabinet.cabinet_positions.cabinet_x_pos,
                     'y': cabinet.cabinet_positions.cabinet_y_pos
