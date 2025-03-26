@@ -33,6 +33,10 @@ class cabinets(models.Model):
     def __str__(self):
         return str(self.building_id)
     
+    def save(self, *args, **kwargs):
+        self.updated_at = timezone.now()
+        super().save(*args, **kwargs)
+    
     @classmethod
     def find_one_rented_cabinet_by_cabinet_id(cls, cabinet_id) :
         return cls.objects.get(id=cabinet_id)
