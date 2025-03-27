@@ -1,4 +1,4 @@
-from django.db.models import Q, F
+from django.db.models import Q, F, Count, Case, When
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from drf_yasg import openapi
@@ -12,10 +12,14 @@ import logging
 from .models import cabinets, buildings, cabinet_histories
 from user.models import users
 from authn.models import authns
-from .serializers import (
-    CabinetHistorySerializer, 
-    CabinetFloorSerializer, 
+from cabinet.serializer.CabinetDetailSerializer import (
     CabinetDetailSerializer
+)
+from cabinet.serializer.CabinetFloorSerializer import (
+    CabinetFloorSerializer
+)
+from cabinet.serializer.CabinetHistorySerializer import (
+    CabinetHistorySerializer
 )
 from .dto import (
     CabinetFloorQueryParamDto, 
@@ -27,10 +31,6 @@ from .dto import (
 )
 from authn.authentication import IsLoginUser
 from authn.admin import AdminRequiredMixin
-
-from django.db.models import Count, Case, When, Value, CharField
-from django.db.models.functions import Coalesce
-from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
