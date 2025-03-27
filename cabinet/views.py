@@ -983,12 +983,9 @@ class CabinetAdminChangeStatusView(APIView, AdminRequiredMixin):
                     # 일반적인 상태 업데이트
                     update_data = {
                         'status': new_status,
-                        'updated_at': timezone.now()
+                        'updated_at': timezone.now(),
+                        'reason': reason if reason else None
                     }
-                    
-                    # reason이 있으면 추가
-                    if reason is not None:
-                        update_data['reason'] = reason
                     
                     # 업데이트 실행
                     cabinets.objects.filter(id=cabinet_id).update(**update_data)
@@ -1001,7 +998,8 @@ class CabinetAdminChangeStatusView(APIView, AdminRequiredMixin):
                     'building': updated_cabinet.building_id.name if updated_cabinet.building_id else None,
                     'floor': updated_cabinet.building_id.floor if updated_cabinet.building_id else None,
                     'cabinetNumber': updated_cabinet.cabinet_number,
-                    'status': updated_cabinet.status
+                    'status': updated_cabinet.status,
+                    'reason': updated_cabinet.reason
                 }
                 
                 updated_cabinets.append(cabinet_info)
