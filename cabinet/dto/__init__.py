@@ -5,9 +5,9 @@ from .CabinetRentDto import CabinetRentDto
 from .CabinetReturnDto import CabinetReturnDto
 from .CabinetSearchDetailDto import CabinetSearchDetailDto
 from .CabinetSearchDto import CabinetSearchDto
-from .CabinetHistoryDto import CabinetHistoryDto
-from .CabinetPaginatedDto import CabinetPaginatedDto
 from .CabinetAdminReturnDto import CabinetAdminReturnDto
+from .CabinetAdminChangeStatusDto import CabinetAdminChangeStatusDto
+from .CabinetStatusSearchDto import CabinetStatusSearchDto
 
 # 선택적으로 __all__ 정의
 __all__ = [
@@ -17,7 +17,7 @@ __all__ = [
     'CabinetReturnDto',
     'CabinetSearchDetailDto',
     'CabinetSearchDto',
-    'CabinetHistoryDto',
-    'CabinetPaginatedDto',
-    'CabinetAdminReturnDto'
+    'CabinetAdminReturnDto',
+    'CabinetAdminChangeStatusDto',
+    'CabinetStatusSearchDto'
 ]

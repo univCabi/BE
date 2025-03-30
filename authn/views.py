@@ -13,7 +13,7 @@ from django.contrib.auth.hashers import make_password
 
 from drf_yasg.utils       import swagger_auto_schema
 from drf_yasg             import openapi
-from user.models import users, buildings
+from user.models import users
 from authn.models import authns
 
 

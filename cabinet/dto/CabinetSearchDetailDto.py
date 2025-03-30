@@ -6,8 +6,6 @@ from core.exception.exceptions import GlobalDtoValidationException
 
 class CabinetSearchDetailDto(BaseValidatedSerializer):
     keyword = serializers.CharField(help_text='검색어')
-    page = serializers.IntegerField(help_text='페이지 번호', default=1)
-    pageSize = serializers.IntegerField(help_text='페이지 크기', default=10)
 
     def validate_keyword(self, value):
         if value is None:

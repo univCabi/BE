@@ -45,3 +45,9 @@ class CabinetHistoryRepository:
         return cabinet_histories.objects.filter(user_id=user_id).order_by(
             'ended_at'
         ).extra(select={'ended_at_null': 'ended_at IS NULL'}, order_by=['-ended_at_null', '-ended_at'])
+    
+    def get_cabinet_histories_by_cabinet_id(self, cabinet_id : int):
+        return cabinet_histories.objects.select_related('cabinet_id').filter(
+            cabinet_id=cabinet_id,
+            ended_at=None
+        ).first()

@@ -1,4 +1,3 @@
-from django.db.models import Q, F, Count, Case, When
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from drf_yasg import openapi
@@ -17,7 +16,9 @@ from cabinet.serializer import (CabinetDetailSerializer,
                                  CabinetFloorSerializer,
                                  CabinetHistorySerializer,
                                  CabinetSearchSerializer, 
-                                 CabinetAdminReturnSerializer)
+                                 CabinetAdminReturnSerializer,
+                                 CabinetStatisticsSerializer,
+                                 CabinetStatusDetailSerializer)
 
 
 from cabinet.dto import (CabinetInfoQueryParamDto,
@@ -26,7 +27,9 @@ from cabinet.dto import (CabinetInfoQueryParamDto,
                          CabinetReturnDto,
                          CabinetSearchDetailDto,
                          CabinetSearchDto,
-                         CabinetAdminReturnDto)
+                         CabinetAdminReturnDto,
+                         CabinetAdminChangeStatusDto,
+                         CabinetStatusSearchDto)
 
 from authn.authentication import IsLoginUser
 from authn.admin import IsAdmin
@@ -377,7 +380,9 @@ class CabinetHistoryView(APIView):
         }
     )
     def get(self, request):
-        cabinet_histories_infos = cabinet_history_service.get_cabinet_histories_by_student_number(student_number=request.user.student_number)
+        cabinet_histories_infos = cabinet_history_service.get_cabinet_histories_by_student_number(
+            student_number=request.user.student_number
+            )
 
         serializer = CabinetHistorySerializer(cabinet_histories_infos, many=True)
 
@@ -461,7 +466,7 @@ class CabinetAdminReturnView(APIView):
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                'cabinetId': openapi.Schema(
+                'cabinetIds': openapi.Schema(
                     type=openapi.TYPE_ARRAY,
                     items=openapi.Schema(type=openapi.TYPE_INTEGER),
                     description='반납할 사물함 ID 목록 (하나의 사물함만 반납하더라도 배열로 전달)'
@@ -517,7 +522,7 @@ class CabinetAdminReturnView(APIView):
         dto = CabinetAdminReturnDto.create_validated(data=request.data)
         
         # 서비스 메소드 호출하여 결과 받기
-        successful_cabinets, failed_ids = cabinet_service.return_cabinets_by_ids(dto.validated_data.get('cabinetId'))
+        successful_cabinets, failed_ids = cabinet_service.return_cabinets_by_ids(dto.validated_data.get('cabinetIds'))
         
         # 에러 메시지 구성
         error_messages = []
@@ -550,17 +555,17 @@ class CabinetAdminReturnView(APIView):
 
 # 2. 관리자 사물함 상태 변경 API (다중 처리 지원)
 #TODO: dto, serializer 추가
-class CabinetAdminChangeStatusView(APIView, IsAdmin):
-    permission_classes = [IsAuthenticated]
+class CabinetAdminChangeStatusView(APIView):
+    permission_classes = [IsAuthenticated, IsAdmin]
     authentication_classes = [IsLoginUser]
 
     @swagger_auto_schema(
         tags=['사물함 관리 (관리자)'],
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
-            required=['cabinetId', 'newStatus'],
+            required=['cabinetIds', 'newStatus'],
             properties={
-                'cabinetId': openapi.Schema(
+                'cabinetIds': openapi.Schema(
                     type=openapi.TYPE_ARRAY,
                     items=openapi.Schema(type=openapi.TYPE_INTEGER),
                     description='상태를 변경할 사물함 ID 목록 (하나의 사물함만 변경하더라도 배열로 전달)'
@@ -622,139 +627,48 @@ class CabinetAdminChangeStatusView(APIView, IsAdmin):
         }
     )
     def post(self, request):
-        # 관리자 권한 확인
-        admin_check = self.check_admin_permission(request)
-        if admin_check:
-            return admin_check
+            # DTO로 입력 데이터 검증
+            dto = CabinetAdminChangeStatusDto.create_validated(data=request.data)
             
-        # 필수 파라미터 확인
-        if 'cabinetId' not in request.data or 'newStatus' not in request.data:
-            return Response(
-                {"error": "cabinetId와 newStatus는 필수입니다"},
-                status=status.HTTP_400_BAD_REQUEST
+            # 서비스 메소드 호출하여 결과 받기
+            successful_cabinets, failed_ids = cabinet_service.change_cabinet_status_by_ids(
+                dto.validated_data.get('cabinetIds'), 
+                dto.validated_data.get('newStatus'), 
+                dto.validated_data.get('reason')
             )
             
-        cabinet_ids = request.data.get('cabinetId')
-        new_status = request.data.get('newStatus')
-        reason = request.data.get('reason')
-        
-        if new_status == 'BROKEN' and not reason:
-            return Response(
-                {"error": "사물함 상태를 'BROKEN'으로 변경할 때는 reason 필드가 필수입니다"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        # cabinetId 유효성 검증 (배열인지 확인)
-        if not isinstance(cabinet_ids, list):
-            return Response(
-                {"error": "cabinetId는 반드시 배열 형태로 전달해야 합니다. 단일 사물함에 대해서도 [123]과 같이 배열로 전달하세요."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # 상태 값 검증
-        valid_statuses = ['AVAILABLE', 'USING', 'BROKEN', 'OVERDUE']
-        if new_status not in valid_statuses:
-            return Response(
-                {"error": f"유효하지 않은 상태입니다. {valid_statuses} 중 하나여야 합니다"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        updated_cabinets = []
-        not_found_ids = []
-        error_cabinets = []  # 상태 변경에 실패한 사물함 ID와 오류 메시지
-        
-        for cabinet_id in cabinet_ids:
-            try:
-                cabinet = cabinets.objects.get(id=cabinet_id)
+            # 에러 메시지 구성
+            error_messages = []
+            for failed in failed_ids:
+                error_messages.append(f"사물함 ID {failed['id']}: {failed['reason']}")
+            
+            # 응답 데이터 준비
+            response_data = {}
+            
+            # 성공한 사물함이 있으면 시리얼라이저로 변환
+            if successful_cabinets:
+                # CabinetAdminReturnSerializer 형식에 맞게 시리얼라이즈
+                serializer = CabinetAdminReturnSerializer(successful_cabinets, many=True)
+                response_data["cabinets"] = serializer.data
                 
-                # 상태 변경 처리
-                old_status = cabinet.status
-                user_id = cabinet.user_id
-                
-                # 'USING' 상태로 변경하는데 사용자가 연결되어 있지 않은 경우
-                if new_status == 'USING' and not user_id:
-                    error_cabinets.append({
-                        'id': cabinet_id,
-                        'error': "사물함을 'USING' 상태로 변경하려면 먼저 사용자를 지정해야 합니다"
-                    })
-                    continue
-                
-                # 'AVAILABLE' 상태로 변경하는데 사용자가 연결되어 있는 경우
-                if new_status == 'AVAILABLE' and user_id:
-                    # 활성 대여 이력 종료
-                    active_history = cabinet_histories.objects.filter(
-                        cabinet_id=cabinet, 
-                        ended_at=None
-                    ).first()
-                    
-                    if active_history:
-                        active_history.ended_at = timezone.now()
-                        active_history.save()
-                    
-                    # update() 메서드를 사용하여 저장
-                    cabinets.objects.filter(id=cabinet_id).update(
-                        status=new_status,
-                        user_id=None,
-                        reason=reason if reason else None,  # reason 추가
-                        updated_at=timezone.now()
-                    )
+                # 메시지 구성
+                if error_messages:
+                    response_data["message"] = f"일부 사물함 상태 변경이 완료되었습니다. (처리된 개수: {len(successful_cabinets)})"
+                    response_data["errors"] = error_messages
                 else:
-                    # 일반적인 상태 업데이트
-                    update_data = {
-                        'status': new_status,
-                        'updated_at': timezone.now()
-                    }
-                    
-                    # reason이 있으면 추가
-                    if reason is not None:
-                        update_data['reason'] = reason
-                    
-                    # 업데이트 실행
-                    cabinets.objects.filter(id=cabinet_id).update(**update_data)
+                    response_data["message"] = f"모든 사물함 상태 변경이 완료되었습니다. (처리된 개수: {len(successful_cabinets)})"
                 
-                # 업데이트된 사물함 정보 저장
-                updated_cabinet = cabinets.objects.select_related('building_id', 'user_id').get(id=cabinet_id)
-                
-                cabinet_info = {
-                    'id': updated_cabinet.id,
-                    'building': updated_cabinet.building_id.name if updated_cabinet.building_id else None,
-                    'floor': updated_cabinet.building_id.floor if updated_cabinet.building_id else None,
-                    'cabinetNumber': updated_cabinet.cabinet_number,
-                    'status': updated_cabinet.status
-                }
-                
-                updated_cabinets.append(cabinet_info)
-                
-            except cabinets.DoesNotExist:
-                not_found_ids.append(cabinet_id)
-        
-        # 에러 메시지 구성
-        error_messages = []
-        if not_found_ids:
-            error_messages.append(f"다음 ID의 사물함을 찾을 수 없습니다: {', '.join(map(str, not_found_ids))}")
-        
-        if error_cabinets:
-            for error_cabinet in error_cabinets:
-                error_messages.append(f"사물함 ID {error_cabinet['id']}: {error_cabinet['error']}")
-        
-        # 처리된 사물함이 없는 경우 에러 반환
-        if not updated_cabinets:
-            return Response(
-                {"error": " ".join(error_messages)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # 부분 성공인 경우 경고 메시지 추가
-        message = "사물함 상태 변경이 완료되었습니다"
-        if error_messages:
-            message += f" (일부 사물함은 처리되지 않았습니다: {' '.join(error_messages)})"
-        
-        return Response({
-            "message": message,
-            "cabinets": updated_cabinets
-        }, status=status.HTTP_200_OK)
-    
-class CabinetDashboardView(APIView, IsAdmin):
-    permission_classes = [IsAuthenticated]
+                return Response(response_data, status=status.HTTP_200_OK)
+            
+            # 모든 사물함 처리에 실패한 경우
+            else:
+                response_data["error"] = "모든 사물함 상태 변경에 실패했습니다."
+                response_data["details"] = error_messages
+                return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CabinetDashboardView(APIView):
+    permission_classes = [IsAuthenticated, IsAdmin]
     authentication_classes = [IsLoginUser]
 
     @swagger_auto_schema(
@@ -791,35 +705,13 @@ class CabinetDashboardView(APIView, IsAdmin):
         }
     )
     def get(self, request):
-        # 관리자 권한 확인
-        admin_check = self.check_admin_permission(request)
-        if admin_check:
-            return admin_check
+        cabinet_stats = cabinet_service.get_cabinet_statistics()
         
-        # 건물별로 상태별 사물함 수를 계산
-        building_stats = cabinets.objects.select_related('building_id').values(
-            'building_id__name'
-        ).annotate(
-            total=Count('id'),
-            in_use=Count(Case(When(status='USING', then=1))),
-            returned=Count(Case(When(status='AVAILABLE', then=1))),
-            broken=Count(Case(When(status='BROKEN', then=1))),
-            overdue=Count(Case(When(status='OVERDUE', then=1)))
-        ).order_by('building_id__name')
+        # 시리얼라이저로 응답 데이터 형식화
+        response_data = {'buildings': cabinet_stats}
+        serializer = CabinetStatisticsSerializer(response_data)
         
-        # 응답 형식 구성
-        result = []
-        for stat in building_stats:
-            result.append({
-                'name': stat['building_id__name'] or '미지정',
-                'total': stat['total'],
-                'using': stat['in_use'],
-                'overdue': stat['overdue'],
-                'broken': stat['broken'],
-                'available': stat['returned']  # 'AVAILABLE' 상태는 'returned'와 동일
-            })
-        
-        return Response({'buildings': result}, status=status.HTTP_200_OK)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class CabinetStatusSearchView(APIView):
@@ -906,86 +798,15 @@ class CabinetStatusSearchView(APIView):
         }
     )
     def get(self, request):
-        # 상태 파라미터 검증
-        status_param = request.query_params.get('status')
-        valid_statuses = ['AVAILABLE', 'USING', 'BROKEN', 'OVERDUE']
+        # DTO로 입력 데이터 검증
+        dto = CabinetStatusSearchDto.create_validated(data=request.query_params)
+        cabinets_data = cabinet_service.get_cabinets_by_status(dto.validated_data.get('status'))
         
-        if not status_param:
-            return Response(
-                {"error": "status 파라미터는 필수입니다"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-            
-        if status_param not in valid_statuses:
-            return Response(
-                {"error": f"유효하지 않은 상태입니다. {valid_statuses} 중 하나여야 합니다"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-            
-        # 해당 상태의 모든 사물함 조회
-        cabinets_qs = cabinets.objects.filter(
-            status=status_param
-        ).select_related('building_id', 'user_id')
-        
-        if not cabinets_qs.exists():
-            return Response(
-                {"error": f"상태가 {status_param}인 사물함을 찾을 수 없습니다"},
-                status=status.HTTP_404_NOT_FOUND
-            )
-            
         # 페이지네이션 적용
         paginator = self.pagination_class()
-        paginated_cabinets = paginator.paginate_queryset(cabinets_qs, request)
+        paginated_cabinets = paginator.paginate_queryset(cabinets_data, request)
         
-        # 응답 데이터 구성
-        results = []
-        for cabinet in paginated_cabinets:
-            cabinet_data = {
-                'id': cabinet.id,
-                'building': cabinet.building_id.name if cabinet.building_id else None,
-                'floor': cabinet.building_id.floor if cabinet.building_id else None,
-                'section': cabinet.building_id.section,
-                'position': {
-                    'x': cabinet.cabinet_positions.cabinet_x_pos,
-                    'y': cabinet.cabinet_positions.cabinet_y_pos
-                } if hasattr(cabinet, 'cabinet_positions') and cabinet.cabinet_positions else None,
-                'cabinetNumber': cabinet.cabinet_number,
-                'status': cabinet.status,
-                'reason' : cabinet.reason,
-                'user': None,
-            }
-            
-            # 사용자 정보 추가 (사용중인 경우)
-            if cabinet.user_id:
-                user = cabinet.user_id
-                cabinet_data['user'] = {
-                    'studentNumber': user.student_number if hasattr(user, 'student_number') else None,
-                    'name': user.name if hasattr(user, 'name') else None
-                }
-                
-                # 연체된 경우 대여 시작일, 만료일 추가
-                if status_param == 'OVERDUE ':
-                    rental_history = cabinet_histories.objects.filter(
-                        cabinet_id=cabinet,
-                        ended_at=None
-                    ).first()
-
-                    #print("status_param:", status_param)
-                    #print("rental_history:", rental_history)
-                    
-                    if rental_history:
-                        cabinet_data['rentalStartDate'] = rental_history.created_at
-                        cabinet_data['overDate'] = rental_history.expired_at
-                elif status_param == "BROKEN":
-                    # select_related를 사용하여 관련 객체까지 함께 로드
-                    rental_history = cabinet_histories.objects.select_related('cabinet_id').filter(
-                        cabinet_id=cabinet,
-                        ended_at=None
-                    ).first()
-                    
-                    if rental_history:
-                        cabinet_data['rentalStartDate'] = rental_history.created_at
-                        cabinet_data['brokenDate'] = rental_history.cabinet_id.updated_at
-            results.append(cabinet_data)
-            
-        return paginator.get_paginated_response(results)
+        # 시리얼라이저로 응답 데이터 형식화
+        serializer = CabinetStatusDetailSerializer(paginated_cabinets, many=True)
+        
+        return paginator.get_paginated_response(serializer.data)

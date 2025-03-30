@@ -54,3 +54,12 @@ class CabinetService :
     
     def return_cabinets_by_ids(self, cabinet_ids : list):
         return cabinet_repository.return_cabinets_by_ids(cabinet_ids)
+    
+    def change_cabinet_status_by_ids(self, cabinet_ids : list, new_status : str, reason : str):
+        return cabinet_repository.change_cabinet_status_by_ids(cabinet_ids, new_status, reason)
+    
+    def get_cabinet_statistics(self):
+        return cabinet_repository.get_cabinet_statistics()
+    
+    def get_cabinets_by_status(self, status : str):
+        return cabinet_repository.get_cabinets_by_status(status)
