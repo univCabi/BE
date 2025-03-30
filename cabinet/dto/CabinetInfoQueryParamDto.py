@@ -1,9 +1,12 @@
 from rest_framework import serializers
-from user.models import BuildingNameEnum
+from core.validate.base import BaseValidatedSerializer
 
-class CabinetFloorQueryParamDto(serializers.Serializer):
+from building.models import BuildingNameEnum
+
+from core.exception.exceptions import GlobalDtoValidationException
+
+class CabinetInfoQueryParamDto(BaseValidatedSerializer):
     building = serializers.CharField(help_text='건물명')
-    #section = serializers.CharField(help_text='구역')
     floor = serializers.IntegerField(help_text='층수', min_value=1)
 
     def validate_building(self, value):
@@ -19,3 +22,11 @@ class CabinetFloorQueryParamDto(serializers.Serializer):
         if not isinstance(value, int):
             raise serializers.ValidationError('층수는 숫자로 입력해주세요.')
         return value
+    
+    @classmethod
+    def create_validated(cls, data):
+        """DTO를 생성하고 검증, 실패 시 예외 발생"""
+        instance = cls(data=data)
+        if not instance.is_valid():
+            raise GlobalDtoValidationException(instance.errors)
+        return instance

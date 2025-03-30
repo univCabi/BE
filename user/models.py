@@ -1,43 +1,8 @@
 from django.db import models
-from enum import Enum
 from django.utils import timezone
 
+from building.models import buildings
 
-class BuildingNameEnum(Enum):
-    가온관 = '가온관'
-    건축관 = '건축관'
-    공학1관 = '공학1관'
-    공학2관 = '공학2관'
-    디자인관 = '디자인관'
-    나래관 = '나래관'
-    누리관 = '누리관'
-    수산과학관 = '수산과학관'
-    웅비관 = '웅비관'
-    인문사회경영관 = '인문사회경영관'
-    자연과학1관 = '자연과학1관'
-    자연과학2관 = '자연과학2관'
-    장영실관 = '장영실관'
-    창의관 = '창의관'
-    충무관 = '충무관'
-    향파관 = '향파관'
-    환경해양관 = '환경해양관'
-    호연관 = '호연관'
-
-""" 
-users model
-"""
-
-class buildings(models.Model):
-    id = models.AutoField(primary_key=True)
-    name = models.CharField(max_length=20, choices=[(tag.value, tag.value) for tag in BuildingNameEnum])
-    floor = models.IntegerField()
-    section = models.CharField(max_length=10)
-    width = models.IntegerField()
-    height = models.IntegerField()
-
-    def __str__(self):
-        return self.name
-    
 class users(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=50)

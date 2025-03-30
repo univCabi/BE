@@ -20,6 +20,7 @@ class Migration(migrations.Migration):
                 ('cabinet_number', models.IntegerField()),
                 ('status', models.CharField(choices=[('BROKEN', 'BROKEN'), ('AVAILABLE', 'AVAILABLE'), ('USING', 'USING'), ('OVERDUE', 'OVERDUE')], default='AVAILABLE', max_length=20)),
                 ('payable', models.CharField(choices=[('PAID', 'PAID'), ('FREE', 'FREE')], default='FREE', max_length=20)),
+                ('reason', models.CharField(blank=True, max_length=255, null=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('deleted_at', models.DateTimeField(blank=True, null=True)),

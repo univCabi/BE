@@ -1,18 +1,9 @@
 from django.utils import timezone
 from django.db import models
 from user.models import users, buildings
-from enum import Enum
 
-class CabinetStatusEnum(Enum):
-    BROKEN = 'BROKEN'
-    AVAILABLE = 'AVAILABLE'
-    USING = 'USING'
-    OVERDUE = 'OVERDUE'
-
-class CabinetPayableEnum(Enum):
-    PAID = 'PAID'
-    FREE = 'FREE'
-
+from cabinet.type import (CabinetStatusEnum,
+                          CabinetPayableEnum)
 
 #TODO: 반납기한에 대한 로직 추가
 

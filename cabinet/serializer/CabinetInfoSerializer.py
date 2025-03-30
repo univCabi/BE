@@ -25,7 +25,4 @@ class CabinetInfoSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         user_id = cabinets.objects.filter(id=obj.id).values('user_id').first().get('user_id')
 
-        print("user_id: ", user_id)
-        print("request.user.id: ", request.user.id)
-
         return user_id == request.user.id if user_id else False

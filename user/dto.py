@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from user.models import BuildingNameEnum
+from building.models import BuildingNameEnum
 from authn.models import RoleEnum
 
 #TODO: 비밀번호 정책
