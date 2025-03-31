@@ -27,7 +27,7 @@ class CabinetRepository:
         # 1. 사용자가 이미 다른 캐비넷을 대여했는지 확인
         try :
             if cabinet_history_repository.get_renting_cabinet_history_by_user_id(user_id) :
-                raise UserHasRentalException(user_id=user_id)
+                raise UserHasRentalException()
         except CabinetNotFoundException:
             pass
 
