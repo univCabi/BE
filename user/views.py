@@ -254,7 +254,7 @@ class MockupView(APIView):
 
                 # Specify the ordered list of SQL files
                 ordered_sql_files = [
-                    'user_buildings.sql',
+                    'building_buildings.sql',
                     'user_users.sql',
                     'authn_authns.sql',
                     'cabinet_cabinets.sql',

@@ -1,4 +1,4 @@
-from multiprocessing import connection
+from django.db import connection 
 from core.middleware.authentication import LoginAuthenticate, IsLoginUser, IsValidRefreshToken
 from authn.serializer import (
     AuthLoginSerializer

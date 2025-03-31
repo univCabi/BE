@@ -11,7 +11,7 @@ from core.util.pagination import paginate_data, CabinetPagination
 
 
 from cabinet.serializer import (CabinetDetailSerializer,
-                                 CabinetFloorSerializer,
+                                 CabinetInfoSerializer,
                                  CabinetHistorySerializer,
                                  CabinetSearchSerializer, 
                                  CabinetAdminReturnSerializer,
@@ -54,7 +54,7 @@ class CabinetInfoView(APIView):
         responses={
             200: openapi.Response(
                 description="성공적으로 조회되었습니다.",
-                schema=CabinetFloorSerializer
+                schema=CabinetInfoSerializer
             ),
             404: openapi.Response(
                 description="Building with the specified name and floor not found.",
@@ -72,17 +72,35 @@ class CabinetInfoView(APIView):
     )
     def get(self, request):
         dto = CabinetInfoQueryParamDto.create_validated(data=request.query_params)
-
-        building = building_service.get_building(
+        
+        # 건물 정보 가져오기 (여러 층 지원)
+        buildings_data = building_service.get_buildings_with_floors(
             dto.validated_data.get('building'),
-            dto.validated_data.get('floor')
+            dto.validated_data.get('floors')
         )
         
-        cabinets = cabinet_service.get_cabinets_by_building_id(building.id)
-
-        serializer = CabinetFloorSerializer(building=building, cabinets=cabinets)
+        # 건물 ID 목록 가져오기
+        building_ids = list(buildings_data.values_list('id', flat=True))
+        
+        # 캐비넷 정보 가져오기
+        cabinets_data = cabinet_service.get_cabinets_by_building_ids(building_ids)
+        
+        # 층별로 그룹화된 건물 정보
+        buildings_by_floor = {
+            building.floor: building for building in buildings_data
+        }
+        
+        serializer = CabinetInfoSerializer(
+            instance=cabinets_data,
+            many=True,
+            context={
+                'request': request, 
+                'buildings': buildings_data,
+                'buildings_by_floor': buildings_by_floor
+            }
+        )
+        
         return Response(serializer.data, status=status.HTTP_200_OK)
-
 
 class CabinetInfoDetailView(APIView):
     permission_classes = [IsAuthenticated]
@@ -330,7 +348,7 @@ class CabinetSearchDetailView(APIView):
         return paginate_data(
             data=cabinet_info,
             request=request,
-            serialized_data=cabinet_serializer.data
+            serialized_data=cabinet_serializer.data,
         )
 
 
@@ -595,7 +613,8 @@ class CabinetAdminChangeStatusView(APIView):
                                     'floor': openapi.Schema(type=openapi.TYPE_INTEGER),
                                     'cabinetNumber': openapi.Schema(type=openapi.TYPE_STRING),
                                     'status': openapi.Schema(type=openapi.TYPE_STRING),
-                                    'reason': openapi.Schema(type=openapi.TYPE_STRING, nullable=True)
+                                    'reason': openapi.Schema(type=openapi.TYPE_STRING, nullable=True),
+                                    'brokenDate': openapi.Schema(type=openapi.TYPE_STRING, nullable=True)
                                 }
                             )
                         )

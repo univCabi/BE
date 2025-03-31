@@ -9,11 +9,17 @@ cabinet_history_repository = CabinetHistoryRepository()
 from cabinet.exceptions import CabinetNotFoundException, CabinetAlreadyRentedException, UserHasRentalException
 
 class CabinetRepository:
-    def get_cabinets_by_building_id(self, building_id : int):
-        cabinet_qs = cabinets.objects.filter(building_id=building_id).select_related('user_id', 'cabinet_positions')
+    def get_cabinets_by_building_ids(self, building_ids):
+        """
+        여러 건물 ID를 받아 해당하는 캐비넷 목록을 반환
+        """
+        cabinet_qs = cabinets.objects.filter(
+            building_id__in=building_ids
+        ).select_related('user_id', 'cabinet_positions')
 
         if not cabinet_qs.exists():
-            raise CabinetNotFoundException(building_id=building_id)
+            raise CabinetNotFoundException(building_ids=building_ids)
+            
         return cabinet_qs
     
     def get_cabinet_by_id(self, cabinet_id : int):
@@ -27,7 +33,7 @@ class CabinetRepository:
         # 1. 사용자가 이미 다른 캐비넷을 대여했는지 확인
         try :
             if cabinet_history_repository.get_renting_cabinet_history_by_user_id(user_id) :
-                raise UserHasRentalException(user_id=user_id)
+                raise UserHasRentalException()
         except CabinetNotFoundException:
             pass
 
@@ -115,37 +121,45 @@ class CabinetRepository:
         return successful_cabinets, failed_ids
     
     def change_cabinet_status_by_ids(self, cabinet_ids: list, new_status: str, reason: str):
-        """
-        특정 ID 목록의 사물함 상태를 변경하고 성공/실패한 캐비닛 정보 반환
-        """
-        failed_ids = []
-        successful_cabinets = []
-        
-        for cabinet_id in cabinet_ids:
-            try:
-                # 먼저 해당 ID의 캐비넷이 존재하는지 확인
-                cabinet = cabinets.objects.get(id=cabinet_id)
-                
-                # 상태 변경
-                updated = self.update_cabinet_status(cabinet_id, None, new_status)
-                
-                if updated:
-                    # 업데이트 후 최신 상태의 캐비넷 객체 가져오기
-                    updated_cabinet = cabinets.objects.select_related('building_id').get(id=cabinet_id)
-                    successful_cabinets.append(updated_cabinet)
-                else:
+            """
+            특정 ID 목록의 사물함 상태를 변경하고 성공/실패한 캐비닛 정보 반환
+            """
+            failed_ids = []
+            successful_cabinets = []
+            
+            for cabinet_id in cabinet_ids:
+                try:
+                    # 먼저 해당 ID의 캐비넷이 존재하는지 확인
+                    cabinet = cabinets.objects.get(id=cabinet_id)
+                    
+                    # 상태 변경
+                    updated = self.update_cabinet_status(cabinet_id, None, new_status)
+                    
+                    if updated:
+                        # 업데이트 후 최신 상태의 캐비넷 객체 가져오기
+                        updated_cabinet = cabinets.objects.select_related('building_id').get(id=cabinet_id)
+                        
+                        # 정보를 직접 업데이트하는 대신, 객체를 우선 가져온 다음 시리얼라이저로 넘기기 위해
+                        # 별도 처리하지 않고 그대로 추가
+                        successful_cabinets.append(updated_cabinet)
+                    else:
+                        failed_ids.append({
+                            'id': cabinet_id, 
+                            'reason': '업데이트 실패'
+                        })
+                        
+                except cabinets.DoesNotExist:
                     failed_ids.append({
                         'id': cabinet_id, 
-                        'reason': '업데이트 실패'
+                        'reason': '해당 ID의 사물함이 존재하지 않습니다'
                     })
-                    
-            except cabinets.DoesNotExist:
-                failed_ids.append({
-                    'id': cabinet_id, 
-                    'reason': '해당 ID의 사물함이 존재하지 않습니다'
-                })
-        
-        return successful_cabinets, failed_ids
+                except Exception as e:
+                    failed_ids.append({
+                        'id': cabinet_id, 
+                        'reason': f'처리 중 오류 발생: {str(e)}'
+                    })
+            
+            return successful_cabinets, failed_ids
     
     def get_cabinet_statistics(self):
         """
@@ -184,7 +198,7 @@ class CabinetRepository:
         ).select_related('building_id', 'user_id')
         
         if not cabinets_qs.exists():
-            raise ValueError(f"상태가 {status_param}인 사물함을 찾을 수 없습니다")
+            raise CabinetNotFoundException(status=status_param)
         
         results = []
         for cabinet in cabinets_qs:
