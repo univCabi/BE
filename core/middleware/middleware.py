@@ -6,7 +6,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from django.contrib.auth import get_user_model
 import jwt
-from .utils import decrypt_student_number  # decrypt_student_number 함수 임포트
+from ...authn.utils import decrypt_student_number  # decrypt_student_number 함수 임포트
 import logging
 from authn.models import authns
 

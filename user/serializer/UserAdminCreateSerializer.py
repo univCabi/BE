@@ -3,7 +3,7 @@ from building.models import BuildingNameEnum
 from authn.models import RoleEnum
 
 #TODO: 비밀번호 정책
-class AdminUserCreateSerializer(serializers.Serializer):
+class UserAdminCreateSerializer(serializers.Serializer):
     name = serializers.CharField(help_text='이름')
     affiliation = serializers.CharField(help_text='소속')
     phoneNumber = serializers.CharField(help_text='전화번호')
@@ -63,7 +63,3 @@ class AdminUserCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError('구역을 입력해주세요.')
         return value
 
-
-
-class AdminUserDeleteSerializer(serializers.Serializer):
-    id = serializers.IntegerField()

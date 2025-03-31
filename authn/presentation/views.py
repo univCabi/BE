@@ -1,20 +1,29 @@
-from authn.authentication import LoginAuthenticate, IsLoginUser, IsAdminUser, IsValidRefreshToken
-from authn.serializers import LoginSerializer
-from .jwt import CustomLoginJwtToken
-import jwt
-from django.http import HttpResponse
+from multiprocessing import connection
+from core.middleware.authentication import LoginAuthenticate, IsLoginUser, IsValidRefreshToken
+from authn.serializer import (
+    AuthLoginSerializer
+)
+from core.middleware.jwt import CustomLoginJwtToken
 
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
-from django.contrib.auth.hashers import make_password
 
 from drf_yasg.utils       import swagger_auto_schema
 from drf_yasg             import openapi
 from user.models import users
 from authn.models import authns
+
+import os
+import sqlparse
+from django.conf import settings
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class LoginView(APIView):
@@ -24,7 +33,7 @@ class LoginView(APIView):
 
     @swagger_auto_schema(    
         tags=['회원 로그인 기능'], 
-        request_body=LoginSerializer, 
+        request_body=AuthLoginSerializer, 
         responses={
             200: openapi.Schema(
                 type=openapi.TYPE_OBJECT,
@@ -116,25 +125,11 @@ class LogoutView(APIView):
             return Response({"error": "Logout failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
-
-import os
-import glob
-import sqlparse
-from django.conf import settings
-from django.core.management import call_command
-from django.db import connection, transaction
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-
-import logging
-
-logger = logging.getLogger(__name__)
 class CreateUserView(APIView):
     permission_classes = [AllowAny]
     #authentication_classes = []
 
-    @swagger_auto_schema(tags=['회원가입을 합니다.'], request_body=LoginSerializer, responses={
+    @swagger_auto_schema(tags=['회원가입을 합니다.'], request_body=AuthLoginSerializer, responses={
         200: openapi.Response(
             description="성공적으로 조회되었습니다.",
             schema=openapi.Schema(

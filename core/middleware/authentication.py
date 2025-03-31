@@ -7,10 +7,9 @@ from rest_framework_simplejwt.exceptions import AuthenticationFailed
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.hashers import check_password
 import jwt
-from django.conf import settings
 from rest_framework_simplejwt.exceptions import TokenError
 
-from .utils import decrypt_student_number
+from core.middleware.jwt import decrypt_student_number
 import logging
 
 logger = logging.getLogger(__name__)
