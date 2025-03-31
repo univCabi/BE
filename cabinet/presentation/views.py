@@ -595,7 +595,8 @@ class CabinetAdminChangeStatusView(APIView):
                                     'floor': openapi.Schema(type=openapi.TYPE_INTEGER),
                                     'cabinetNumber': openapi.Schema(type=openapi.TYPE_STRING),
                                     'status': openapi.Schema(type=openapi.TYPE_STRING),
-                                    'reason': openapi.Schema(type=openapi.TYPE_STRING, nullable=True)
+                                    'reason': openapi.Schema(type=openapi.TYPE_STRING, nullable=True),
+                                    'brokenDate': openapi.Schema(type=openapi.TYPE_STRING, nullable=True)
                                 }
                             )
                         )
