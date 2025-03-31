@@ -9,8 +9,8 @@ cabinet_repository = CabinetRepository()
 cabinet_history_repository = CabinetHistoryRepository()
 
 class CabinetService :
-    def get_cabinets_by_building_id(self, building_id : int):
-        return cabinet_repository.get_cabinets_by_building_id(building_id)
+    def get_cabinets_by_building_ids(self, building_id : int):
+        return cabinet_repository.get_cabinets_by_building_ids(building_id)
 
     def get_cabinet_by_id(self, cabinet_id : int):
         return cabinet_repository.get_cabinet_by_id(cabinet_id)

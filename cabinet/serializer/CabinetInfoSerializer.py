@@ -23,6 +23,9 @@ class CabinetInfoSerializer(serializers.ModelSerializer):
     #TODO: Implement this method
     def get_isMine(self, obj):
         request = self.context.get('request')
+        # request가 None인 경우 처리
+        if not request:
+            return False
+            
         user_id = cabinets.objects.filter(id=obj.id).values('user_id').first().get('user_id')
-
-        return user_id == request.user.id if user_id else False
+        return user_id is not None and user_id == request.user.id if user_id else False

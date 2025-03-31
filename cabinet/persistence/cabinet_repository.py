@@ -9,11 +9,17 @@ cabinet_history_repository = CabinetHistoryRepository()
 from cabinet.exceptions import CabinetNotFoundException, CabinetAlreadyRentedException, UserHasRentalException
 
 class CabinetRepository:
-    def get_cabinets_by_building_id(self, building_id : int):
-        cabinet_qs = cabinets.objects.filter(building_id=building_id).select_related('user_id', 'cabinet_positions')
+    def get_cabinets_by_building_ids(self, building_ids):
+        """
+        여러 건물 ID를 받아 해당하는 캐비넷 목록을 반환
+        """
+        cabinet_qs = cabinets.objects.filter(
+            building_id__in=building_ids
+        ).select_related('user_id', 'cabinet_positions')
 
         if not cabinet_qs.exists():
-            raise CabinetNotFoundException(building_id=building_id)
+            raise CabinetNotFoundException(building_ids=building_ids)
+            
         return cabinet_qs
     
     def get_cabinet_by_id(self, cabinet_id : int):
