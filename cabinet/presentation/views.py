@@ -348,7 +348,7 @@ class CabinetSearchDetailView(APIView):
         return paginate_data(
             data=cabinet_info,
             request=request,
-            serialized_data=cabinet_serializer.data
+            serialized_data=cabinet_serializer.data,
         )
 
 

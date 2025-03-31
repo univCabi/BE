@@ -66,7 +66,7 @@ def paginate_data(data, request, pagination_class=CabinetPagination, transform_f
         # 에러 발생 시 기본 응답 생성
         try:
             # 페이지 크기 적용 (기본 30, 쿼리 파라미터 있으면 그 값 사용)
-            limit = int(page_size) if page_size and page_size.isdigit() else 30
+            limit = int(page_size) if page_size and page_size.isdigit() else 12
             limit = min(limit, 100)  # 최대 100개로 제한
             
             # 직렬화 방식에 따라 결과 준비
