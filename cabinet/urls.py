@@ -1,9 +1,9 @@
 from django.urls import path
-from . import views
+from .presentation import views
 
 urlpatterns = [
-    path('', views.CabinetFloorView.as_view(), name='floor'),
-    path('detail', views.CabinetFloorDetailView.as_view(), name='floor_detail'),
+    path('', views.CabinetInfoView.as_view(), name='info'),
+    path('detail', views.CabinetInfoDetailView.as_view(), name='floor_detail'),
     path('rent', views.CabinetRentView.as_view(), name='rent'),
     path('return', views.CabinetReturnView.as_view(), name='return'),
 

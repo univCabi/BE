@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'building',
     'user',
     'authn',
     'cabinet',
@@ -159,6 +160,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',  # Require authentication for all views by default
     ],
+    'EXCEPTION_HANDLER': 'core.exception.handlers.global_exception_handler',
 }
 
 # Internationalization

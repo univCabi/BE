@@ -51,6 +51,6 @@ class GetProfileMeSerializer(CamelCaseSerializer):
         }
 
 
-class UpdateProfileMeSerializer(serializers.Serializer):
+class UserUpdateProfileMeSerializer(serializers.Serializer):
     isVisible = serializers.BooleanField(help_text='이름 공개 여부')
 

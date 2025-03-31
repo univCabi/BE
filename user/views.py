@@ -12,18 +12,29 @@ from rest_framework import status
 from drf_yasg.utils       import swagger_auto_schema
 from drf_yasg             import openapi
 
-from authn.authentication import IsLoginUser, IsAdminUser
-from .serializers import GetProfileMeSerializer, UpdateProfileMeSerializer
+from core.middleware.authentication import IsLoginUser, IsAdminUser
+from .serializers import GetProfileMeSerializer
 from .models import users
 from authn.models import authns
 from cabinet.models import buildings
 
-from .dto import AdminUserCreateSerializer, AdminUserDeleteSerializer
+
+from user.serializer import (
+    UserAdminCreateSerializer
+)
+
+from user.dto import (
+    UserProfileUpdateDto
+)
 
 logger = logging.getLogger(__name__)
 
+from user.business.user_service import UserService
 
-class ProfileMeView(APIView):
+user_service = UserService()
+
+
+class UserProfileMeView(APIView):
     permission_classes = [IsAuthenticated]
     authentication_classes = [IsLoginUser]
     
@@ -58,25 +69,10 @@ class ProfileMeView(APIView):
         }
     )
     def get(self, request):
-        try:
-            # Get the currently logged-in user's student number
-            student_number = request.user.student_number
+            user = user_service.get_user_by_student_number(request.user.student_number)        
             
-            # Get user instance by student number
-            user = users.find_one_userinfo_by_student_number(student_number=student_number)
-            
-            # Serialize the user with GetProfileMeDto
-            profile_serializer = GetProfileMeSerializer(user)
-            return Response(profile_serializer.data, status=status.HTTP_200_OK)
-        
-        except users.DoesNotExist:
-            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
-        except authns.DoesNotExist:
-            return Response({'error': 'Authn record not found'}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            print(f"Unexpected error: {e}")
-            return Response({'error': 'Internal Server Error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
+            serializer = GetProfileMeSerializer(user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
         tags=['회원 본인 프로필 수정'],
@@ -114,21 +110,11 @@ class ProfileMeView(APIView):
         }
     )
     def post(self, request):
-        student_number = request.user.student_number
-        
-        is_visible = request.data.get('isVisible')
 
-        if is_visible is None:
-            return Response({'error': 'isVisible is required'}, status=status.HTTP_400_BAD_REQUEST)
+        dto = UserProfileUpdateDto.create_validated(data=request.data)
+        user_service.update_user_is_visible_by_student_number(student_number=request.user.student_number, is_visible=dto.validated_data['isVisible'])
+        return Response({'message': 'User updated successfully'}, status=status.HTTP_200_OK)
 
-        try:
-            users.update_user_is_visible_by_student_number(student_number=student_number, is_visible=is_visible)
-            return Response({'message': 'User updated successfully'}, status=status.HTTP_200_OK)
-        except users.DoesNotExist:
-            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            print(f"Unexpected error: {e}")
-            return Response({'error': 'Internal Server Error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class AdminUserCreateView(APIView):
@@ -137,7 +123,7 @@ class AdminUserCreateView(APIView):
 
     @swagger_auto_schema(
         tags=['관리자 유저 생성'],
-        request_body=AdminUserCreateSerializer,
+        request_body=UserAdminCreateSerializer,
         responses={
             201: openapi.Schema(
                 type=openapi.TYPE_OBJECT,
@@ -161,7 +147,7 @@ class AdminUserCreateView(APIView):
     )
     def post(self, request):
 
-        create_user_dto = AdminUserCreateSerializer(data=request.data)
+        create_user_dto = UserAdminCreateSerializer(data=request.data)
 
         if not create_user_dto.is_valid():
             return Response(create_user_dto.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -204,7 +190,6 @@ class AdminUserCreateView(APIView):
 class AdminUserDeleteView(APIView):
     pass
     
-
 
 
 class MockupView(APIView):
