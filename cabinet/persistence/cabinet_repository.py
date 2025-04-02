@@ -1,3 +1,4 @@
+from django.utils import timezone
 from cabinet.models import cabinets
 from django.db.models import Count, Case, When
 from cabinet.exceptions import CabinetNotFoundException, CabinetAlreadyRentedException, UserHasRentalException, CabinetReturnException
@@ -64,7 +65,8 @@ class CabinetRepository:
     def update_cabinet_status(self, cabinet_id : int, user_id : int, status : str):
         return cabinets.objects.filter(id=cabinet_id).update(
             status=status, 
-            user_id_id=user_id
+            user_id_id=user_id,
+            updated_at=timezone.now()
         )
     
     def get_cabinets_exact_match_by_cabinet_number(self, cabinet_number : int):

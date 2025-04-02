@@ -51,6 +51,23 @@ class CabinetInfoView(APIView):
     @swagger_auto_schema(
         tags=['사물함 정보 조회'],
         query_serializer=CabinetInfoQueryParamDto,
+        manual_parameters=[
+            openapi.Parameter(
+                'building', 
+                openapi.IN_QUERY, 
+                type=openapi.TYPE_STRING, 
+                description='건물 이름',
+                required=True
+            ),
+            openapi.Parameter(
+                'floors', 
+                openapi.IN_QUERY, 
+                type=openapi.TYPE_ARRAY,
+                items=openapi.Schema(type=openapi.TYPE_INTEGER),
+                description='층 정보',
+                required=True
+            ),
+        ],
         responses={
             200: openapi.Response(
                 description="성공적으로 조회되었습니다.",
