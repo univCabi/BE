@@ -18,6 +18,7 @@ class CabinetDetailSerializer(serializers.ModelSerializer):
     isVisible = serializers.SerializerMethodField()
     username = serializers.SerializerMethodField()
     isMine = serializers.SerializerMethodField()
+    isRentAvailable = serializers.SerializerMethodField()
     expiredAt = serializers.SerializerMethodField()
 
     class Meta:
@@ -31,7 +32,8 @@ class CabinetDetailSerializer(serializers.ModelSerializer):
             'isVisible',
             'username',
             'isMine',
-            'expiredAt'
+            'expiredAt',
+            'isRentAvailable'
         ]
 
     def get_isVisible(self, obj):
@@ -70,3 +72,40 @@ class CabinetDetailSerializer(serializers.ModelSerializer):
         """
         history = cabinet_histories.objects.filter(cabinet_id=obj).first()
         return history.expired_at if history else None
+
+    def get_isRentAvailable(self, obj):
+
+        
+        # 기본 조건: 상태가 'AVAILABLE'이고 payable이 'FREE'여야 함
+        if obj.status != 'AVAILABLE' or obj.payable != 'FREE':
+            return False
+        
+        try:
+            # 날짜 비교만 수행하여 시간대 문제 회피
+            # (1) 현재 시간
+            current_time = timezone.now()
+            
+            # (2) 마지막 업데이트 시간에서 날짜 부분만 추출
+            updated_date = obj.updated_at.date()
+            
+            # (3) 다음 날 계산
+            next_day = updated_date + datetime.timedelta(days=1)
+            
+            # (4) 현재 날짜
+            current_date = current_time.date()
+            
+            # (5) 현재 시간이 다음 날보다 이후인 경우 무조건 대여 가능
+            if current_date > next_day:
+                return True
+            
+            # (6) 현재 날짜가 다음 날과 같고, 시간이 13시 이후인 경우 대여 가능
+            if current_date == next_day and current_time.hour >= 13:
+                return True
+            
+            # 그 외의 경우 대여 불가능
+            return False
+            
+        except Exception as e:
+            # 오류 발생 시 로그 기록 후 대여 불가능 반환
+            print(f"Error in get_isRentAvailable: {str(e)}")
+            return False
