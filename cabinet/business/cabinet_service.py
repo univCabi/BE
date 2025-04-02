@@ -41,7 +41,7 @@ class CabinetService :
         cabinet_history_repository.return_cabinet(cabinet, user_auth_info.user_id)
 
         # 캐비넷 상태 변경
-        cabinet_repository.update_cabinet_status(cabinet_id, user_auth_info.user_id, 'AVAILABLE')
+        cabinet_repository.update_cabinet_status(cabinet_id, user_id=None, status='AVAILABLE')
 
     def search_cabinet(self, keyword : str):
         if keyword.isdigit():
