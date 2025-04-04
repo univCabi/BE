@@ -30,15 +30,18 @@ class GetProfileMeSerializer(CamelCaseSerializer):
         except cabinet_histories.DoesNotExist:
             cabinet_history = None
 
-        # Make `current_time` timezone-aware
-        current_time = datetime.now(pytz.UTC)  # Ensure timezone awareness
+        # Make current_time timezone-aware
+        current_time = datetime.now(pytz.UTC)
 
-        # Calculate `leftDate`
-        left_date = (
-            (cabinet_history.expired_at - current_time).days
-            if cabinet_history and cabinet_history.expired_at
-            else None
-        )
+        # Calculate leftDate
+        left_date = None
+        if cabinet_history and cabinet_history.expired_at:
+            # Make expired_at timezone-aware if it isn't already
+            expired_at = cabinet_history.expired_at
+            if expired_at.tzinfo is None:
+                expired_at = pytz.UTC.localize(expired_at)
+            
+            left_date = (expired_at - current_time).days
 
         return {
             'building': cabinet.building_id.name,
