@@ -38,6 +38,7 @@ class CabinetHistoryRepository:
         
     def return_cabinet(self, cabinet : object, user_id : int):
         return cabinet_histories.objects.filter(user_id=user_id, cabinet_id=cabinet, ended_at=None).update(
+            expired_at=timezone.now(),
             ended_at=timezone.now(),
             updated_at=timezone.now()
         )
