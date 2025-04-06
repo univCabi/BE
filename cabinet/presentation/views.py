@@ -16,7 +16,8 @@ from cabinet.serializer import (CabinetDetailSerializer,
                                  CabinetSearchSerializer, 
                                  CabinetAdminReturnSerializer,
                                  CabinetStatisticsSerializer,
-                                 CabinetStatusDetailSerializer)
+                                 CabinetStatusDetailSerializer,
+                                 CabinetBookmarkSerializer)
 
 
 from cabinet.dto import (CabinetInfoQueryParamDto,
@@ -27,9 +28,10 @@ from cabinet.dto import (CabinetInfoQueryParamDto,
                          CabinetSearchDto,
                          CabinetAdminReturnDto,
                          CabinetAdminChangeStatusDto,
-                         CabinetStatusSearchDto)
+                         CabinetStatusSearchDto,
+                         CabinetBookmarkDto)
 
-from core.middleware.authentication import IsLoginUser
+from core.middleware.authentication import IsAdminUser, IsLoginUser
 from authn.admin import IsAdmin
 
 logger = logging.getLogger(__name__)
@@ -38,10 +40,12 @@ logger = logging.getLogger(__name__)
 
 from building.business.building_service import BuildingService
 from cabinet.business.cabinet_service import CabinetService
+from cabinet.business.cabinet_bookmark_service import CabinetBookmarkService
 from cabinet.business.cabinet_history_service import CabinetHistoryService
 
-cabinet_service = CabinetService()
 building_service = BuildingService()
+cabinet_service = CabinetService()
+cabinet_bookmark_service = CabinetBookmarkService()
 cabinet_history_service = CabinetHistoryService()
 
 class CabinetInfoView(APIView):
@@ -584,38 +588,17 @@ class CabinetAdminReturnView(APIView):
             return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
 
 
-# 2. 관리자 사물함 상태 변경 API (다중 처리 지원)
-#TODO: dto, serializer 추가
 class CabinetAdminChangeStatusView(APIView):
     permission_classes = [IsAuthenticated, IsAdmin]
     authentication_classes = [IsLoginUser]
 
     @swagger_auto_schema(
-        tags=['사물함 관리 (관리자)'],
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            required=['cabinetIds', 'newStatus'],
-            properties={
-                'cabinetIds': openapi.Schema(
-                    type=openapi.TYPE_ARRAY,
-                    items=openapi.Schema(type=openapi.TYPE_INTEGER),
-                    description='상태를 변경할 사물함 ID 목록 (하나의 사물함만 변경하더라도 배열로 전달)'
-                ),
-                'newStatus': openapi.Schema(
-                    type=openapi.TYPE_STRING, 
-                    description='새 상태 (AVAILABLE, USING, BROKEN, OVERDUE)',
-                    enum=['AVAILABLE', 'USING', 'BROKEN', 'OVERDUE']
-                ),
-                'reason': openapi.Schema(
-                    type=openapi.TYPE_STRING,
-                    description='사물함 상태 변경 이유',
-                    nullable=True
-                )
-            }
-        ),
+        operation_id="admin_cabinet_change_status",
+        tags=['Admin 사물함 관리'],
+        request_body=CabinetAdminChangeStatusDto,
         responses={
             200: openapi.Response(
-                description="사물함 상태 변경 성공",
+                description="사물함 상태 변경 성공 (전체 또는 일부)",
                 schema=openapi.Schema(
                     type=openapi.TYPE_OBJECT,
                     properties={
@@ -624,79 +607,81 @@ class CabinetAdminChangeStatusView(APIView):
                             type=openapi.TYPE_ARRAY,
                             items=openapi.Schema(
                                 type=openapi.TYPE_OBJECT,
-                                properties={
-                                    'id': openapi.Schema(type=openapi.TYPE_INTEGER),
-                                    'building': openapi.Schema(type=openapi.TYPE_STRING),
-                                    'floor': openapi.Schema(type=openapi.TYPE_INTEGER),
-                                    'cabinetNumber': openapi.Schema(type=openapi.TYPE_STRING),
-                                    'status': openapi.Schema(type=openapi.TYPE_STRING),
-                                    'reason': openapi.Schema(type=openapi.TYPE_STRING, nullable=True),
-                                    'brokenDate': openapi.Schema(type=openapi.TYPE_STRING, nullable=True)
-                                }
+                                properties=CabinetAdminReturnSerializer()
                             )
+                        ),
+                        'errors': openapi.Schema(
+                            type=openapi.TYPE_ARRAY,
+                            items=openapi.Schema(type=openapi.TYPE_STRING)
                         )
                     }
                 )
             ),
-            400: openapi.Response(
-                description="잘못된 요청",
-                schema=openapi.Schema(type=openapi.TYPE_OBJECT, properties={
-                    'error': openapi.Schema(type=openapi.TYPE_STRING)
-                })
-            ),
-            403: openapi.Response(
-                description="권한 없음",
-                schema=openapi.Schema(type=openapi.TYPE_OBJECT, properties={
-                    'error': openapi.Schema(type=openapi.TYPE_STRING)
-                })
-            ),
-            404: openapi.Response(
-                description="사물함을 찾을 수 없음",
-                schema=openapi.Schema(type=openapi.TYPE_OBJECT, properties={
-                    'error': openapi.Schema(type=openapi.TYPE_STRING)
-                })
-            ),
+            400: "잘못된 요청 또는 모든 사물함 상태 변경 실패",
+            401: "인증 실패",
+            403: "권한 없음 (관리자 아님)",
+            500: "서버 오류"
         }
     )
     def post(self, request):
-            # DTO로 입력 데이터 검증
-            dto = CabinetAdminChangeStatusDto.create_validated(data=request.data)
-            
-            # 서비스 메소드 호출하여 결과 받기
-            successful_cabinets, failed_ids = cabinet_service.change_cabinet_status_by_ids(
-                dto.validated_data.get('cabinetIds'), 
-                dto.validated_data.get('newStatus'), 
-                dto.validated_data.get('reason')
+        """관리자 권한으로 사물함 상태를 변경합니다."""
+        # DTO로 입력 데이터 검증
+        dto = CabinetAdminChangeStatusDto.create_validated(data=request.data)
+        
+        cabinet_service = CabinetService()
+        
+        # 새 상태에 따라 서비스 메소드 호출 방식 분기
+        if dto.validated_data.get('newStatus') in ['USING', 'OVERDUE']:
+            # USING, OVERDUE 상태는 studentNumber가 필요
+            successful_cabinets, failed_ids = cabinet_service.assign_cabinet_to_user(
+                cabinet_id=dto.validated_data.get('cabinetIds')[0],  # 하나의 ID만 가능
+                student_number=dto.validated_data.get('studentNumber'),
+                status=dto.validated_data.get('newStatus')
             )
+        elif dto.validated_data.get('newStatus') == 'BROKEN':
+            # BROKEN 상태는 reason이 필요
+            successful_cabinets, failed_ids = cabinet_service.change_cabinet_status_by_ids(
+                cabinet_ids=dto.validated_data.get('cabinetIds'),
+                new_status=dto.validated_data.get('newStatus'),
+                reason=dto.validated_data.get('reason', '')  # 빈 문자열이라도 전달
+            )
+        else:  # AVAILABLE 상태
+            # AVAILABLE 상태 변경 시 빈 문자열 reason 전달 (reason=None 대신)
+            successful_cabinets, failed_ids = cabinet_service.change_cabinet_status_by_ids(
+                cabinet_ids=dto.validated_data.get('cabinetIds'),
+                new_status=dto.validated_data.get('newStatus'),
+                reason=''  # 빈 문자열 전달
+            )
+        
+        # 에러 메시지 구성
+        error_messages = []
+        for failed in failed_ids:
+            error_messages.append(f"사물함 ID {failed['id']}: {failed['reason']}")
+        
+        # 응답 데이터 준비
+        response_data = {}
+        
+        # 성공한 사물함이 있으면 시리얼라이저로 변환
+        if successful_cabinets:
+            # CabinetAdminReturnSerializer 형식에 맞게 시리얼라이즈
+            serializer = CabinetAdminReturnSerializer(successful_cabinets, many=True)
+            response_data["cabinets"] = serializer.data
             
-            # 에러 메시지 구성
-            error_messages = []
-            for failed in failed_ids:
-                error_messages.append(f"사물함 ID {failed['id']}: {failed['reason']}")
-            
-            # 응답 데이터 준비
-            response_data = {}
-            
-            # 성공한 사물함이 있으면 시리얼라이저로 변환
-            if successful_cabinets:
-                # CabinetAdminReturnSerializer 형식에 맞게 시리얼라이즈
-                serializer = CabinetAdminReturnSerializer(successful_cabinets, many=True)
-                response_data["cabinets"] = serializer.data
-                
-                # 메시지 구성
-                if error_messages:
-                    response_data["message"] = f"일부 사물함 상태 변경이 완료되었습니다. (처리된 개수: {len(successful_cabinets)})"
-                    response_data["errors"] = error_messages
-                else:
-                    response_data["message"] = f"모든 사물함 상태 변경이 완료되었습니다. (처리된 개수: {len(successful_cabinets)})"
-                
-                return Response(response_data, status=status.HTTP_200_OK)
-            
-            # 모든 사물함 처리에 실패한 경우
+            # 메시지 구성
+            if error_messages:
+                response_data["message"] = f"일부 사물함 상태 변경이 완료되었습니다. (처리된 개수: {len(successful_cabinets)})"
+                response_data["errors"] = error_messages
             else:
-                response_data["error"] = "모든 사물함 상태 변경에 실패했습니다."
-                response_data["details"] = error_messages
-                return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+                response_data["message"] = f"모든 사물함 상태 변경이 완료되었습니다. (처리된 개수: {len(successful_cabinets)})"
+            
+            return Response(response_data, status=status.HTTP_200_OK)
+        
+        # 모든 사물함 처리에 실패한 경우
+        else:
+            response_data["error"] = "모든 사물함 상태 변경에 실패했습니다."
+            response_data["details"] = error_messages
+            return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+                
 
 
 class CabinetDashboardView(APIView):
@@ -842,3 +827,113 @@ class CabinetStatusSearchView(APIView):
         serializer = CabinetStatusDetailSerializer(paginated_cabinets, many=True)
         
         return paginator.get_paginated_response(serializer.data)
+    
+
+class CabinetBookmarkAddView(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [IsLoginUser]
+
+    @swagger_auto_schema(
+        tags=['사물함 즐겨찾기 추가'],
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'cabinetId': openapi.Schema(type=openapi.TYPE_INTEGER, description='사물함 ID')
+            },
+            required=['cabinetId']
+        ),
+        responses={
+            200: openapi.Response(
+                description="즐겨찾기 추가 성공",
+                schema=openapi.Schema(type=openapi.TYPE_OBJECT, properties={
+                    'message': openapi.Schema(type=openapi.TYPE_STRING)
+                })
+            ),
+            400: openapi.Response(
+                description="잘못된 요청",
+                schema=openapi.Schema(type=openapi.TYPE_OBJECT, properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING)
+                })
+            ),
+            404: openapi.Response(
+                description="사물함을 찾을 수 없음",
+                schema=openapi.Schema(type=openapi.TYPE_OBJECT, properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING)
+                })
+            ),
+        }
+    )
+    def post(self, request):
+        dto = CabinetBookmarkDto.create_validated(data=request.data)
+
+        cabinet_bookmark_service.add_bookmark(cabinet_id=dto.validated_data.get('cabinetId'), student_number=request.user.student_number)
+
+        return Response({"message": "즐겨찾기에 추가되었습니다."}, status=status.HTTP_200_OK)
+    
+class CabinetBookmarkRemoveView(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [IsLoginUser]
+
+    @swagger_auto_schema(
+        tags=['사물함 즐겨찾기 삭제'],
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'cabinetId': openapi.Schema(type=openapi.TYPE_INTEGER, description='사물함 ID')
+            },
+            required=['cabinetId']
+        ),
+        responses={
+            200: openapi.Response(
+                description="즐겨찾기 삭제 성공",
+                schema=openapi.Schema(type=openapi.TYPE_OBJECT, properties={
+                    'message': openapi.Schema(type=openapi.TYPE_STRING)
+                })
+            ),
+            400: openapi.Response(
+                description="잘못된 요청",
+                schema=openapi.Schema(type=openapi.TYPE_OBJECT, properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING)
+                })
+            ),
+            404: openapi.Response(
+                description="사물함을 찾을 수 없음",
+                schema=openapi.Schema(type=openapi.TYPE_OBJECT, properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING)
+                })
+            ),
+        }
+    )
+    def post(self, request):
+        dto = CabinetBookmarkDto.create_validated(data=request.data)
+
+        cabinet_bookmark_service.remove_bookmark(cabinet_id=dto.validated_data.get('cabinetId'), student_number=request.user.student_number)
+
+        return Response({"message": "즐겨찾기가 삭제되었습니다."}, status=status.HTTP_200_OK)
+    
+
+class CabinetBookmarkListView(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [IsLoginUser]
+
+    @swagger_auto_schema(
+        tags=['사물함 즐겨찾기 조회'],
+        responses={
+            200: openapi.Response(
+                description="즐겨찾기 조회 성공",
+                schema=CabinetSearchSerializer(many=True)
+            ),
+            404: openapi.Response(
+                description="즐겨찾기를 찾을 수 없음",
+                schema=openapi.Schema(type=openapi.TYPE_OBJECT, properties={
+                    'error': openapi.Schema(type=openapi.TYPE_STRING)
+                })
+            ),
+        }
+    )
+    def get(self, request):
+        bookmarks = cabinet_bookmark_service.get_bookmarks(student_number=request.user.student_number)
+
+        serializer = CabinetBookmarkSerializer(bookmarks, many=True)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)

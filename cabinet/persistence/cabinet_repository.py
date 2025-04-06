@@ -122,46 +122,120 @@ class CabinetRepository:
         
         return successful_cabinets, failed_ids
     
-    def change_cabinet_status_by_ids(self, cabinet_ids: list, new_status: str, reason: str):
-            """
-            특정 ID 목록의 사물함 상태를 변경하고 성공/실패한 캐비닛 정보 반환
-            """
-            failed_ids = []
-            successful_cabinets = []
+    def change_cabinet_status_by_ids(self, cabinet_ids, new_status, reason=''):
+        """
+        관리자용: 여러 사물함의 상태를 변경합니다.
+        
+        Args:
+            cabinet_ids: 상태를 변경할 사물함 ID 목록
+            new_status: 변경할 상태 (AVAILABLE, BROKEN)
+            reason: 상태 변경 사유 (BROKEN 상태일 때 필수)
             
-            for cabinet_id in cabinet_ids:
-                try:
-                    # 먼저 해당 ID의 캐비넷이 존재하는지 확인
-                    cabinet = cabinets.objects.get(id=cabinet_id)
-                    
-                    # 상태 변경
-                    updated = self.update_cabinet_status(cabinet_id, None, new_status)
-                    
-                    if updated:
-                        # 업데이트 후 최신 상태의 캐비넷 객체 가져오기
-                        updated_cabinet = cabinets.objects.select_related('building_id').get(id=cabinet_id)
-                        
-                        # 정보를 직접 업데이트하는 대신, 객체를 우선 가져온 다음 시리얼라이저로 넘기기 위해
-                        # 별도 처리하지 않고 그대로 추가
-                        successful_cabinets.append(updated_cabinet)
-                    else:
-                        failed_ids.append({
-                            'id': cabinet_id, 
-                            'reason': '업데이트 실패'
-                        })
-                        
-                except cabinets.DoesNotExist:
+        Returns:
+            successful_cabinets: 성공적으로 상태가 변경된 사물함 목록
+            failed_ids: 상태 변경에 실패한 사물함 ID와 실패 사유
+        """
+        successful_cabinets = []
+        failed_ids = []
+        
+        for cabinet_id in cabinet_ids:
+            try:
+                # 사물함 조회
+                cabinet = cabinets.objects.filter(id=cabinet_id).first()
+                
+                if not cabinet:
                     failed_ids.append({
-                        'id': cabinet_id, 
-                        'reason': '해당 ID의 사물함이 존재하지 않습니다'
+                        "id": cabinet_id,
+                        "reason": "사물함을 찾을 수 없습니다."
                     })
-                except Exception as e:
-                    failed_ids.append({
-                        'id': cabinet_id, 
-                        'reason': f'처리 중 오류 발생: {str(e)}'
-                    })
+                    continue
+                
+                # 상태 변경
+                cabinet.status = new_status
+                
+                # BROKEN 상태일 때는 사유 필드 업데이트
+                if new_status == "BROKEN":
+                    cabinet.reason = reason
+                elif new_status == "AVAILABLE":
+                    # AVAILABLE 상태로 변경 시 사용자 정보 초기화 및 관련 히스토리 종료
+                    if cabinet.user_id:
+                        # 사용 중인 사물함 히스토리 종료
+                        #history = cabinet_histories.objects.filter(
+                        #    cabinet_id=cabinet,
+                        #    ended_at__isnull=True
+                        #).first()
+                        
+                        #if history:
+                        #    history.ended_at = timezone.now()
+                        #    history.save()
+                        cabinet_history_repository.return_cabinet(cabinet, cabinet.user_id)
+                    
+                    # 사용자 정보 초기화
+                    cabinet.user_id = None
+                    cabinet.reason = None
+                
+                cabinet.save()
+                successful_cabinets.append(cabinet)
+                
+            except Exception as e:
+                failed_ids.append({
+                    "id": cabinet_id,
+                    "reason": str(e)
+                })
+        
+        return successful_cabinets, failed_ids
+    
+    def assign_cabinet_to_user(self, cabinet_id, user_auth_info, status="USING"):
+        """
+        관리자용: 사물함을 특정 사용자에게 할당합니다.
+        
+        Args:
+            cabinet_id: 할당할 사물함 ID
+            user_auth_info: 사용자 인증 정보 객체
+            status: 변경할 상태 (USING 또는 OVERDUE)
             
-            return successful_cabinets, failed_ids
+        Returns:
+            successful_cabinets: 성공적으로 할당된 사물함
+            failed_ids: 할당 실패 정보
+        """
+        successful_cabinets = []
+        failed_ids = []
+        
+        try:
+            # 사물함 조회
+            cabinet = cabinets.objects.filter(id=cabinet_id).first()
+            
+            if not cabinet:
+                failed_ids.append({
+                    "id": cabinet_id,
+                    "reason": "사물함을 찾을 수 없습니다."
+                })
+                return successful_cabinets, failed_ids
+            
+            user = user_auth_info.user_id
+            
+            # 사물함 상태 업데이트
+            cabinet.user_id = user
+            cabinet.status = status
+            cabinet.save()
+
+            # 상태에 따라 적절한 사물함 히스토리 생성
+            if status == "OVERDUE":
+                # OVERDUE 상태일 경우 현재 시간을 기준으로 ended_at과 expired_at 설정
+                cabinet_history_repository.rent_cabinet_overdue(cabinet, user)
+            else:
+                # 일반적인 대여 시에는 기존 메소드 사용
+                cabinet_history_repository.rent_cabinet(cabinet, user)
+            
+            successful_cabinets.append(cabinet)
+            
+        except Exception as e:
+            failed_ids.append({
+                "id": cabinet_id,
+                "reason": str(e)
+            })
+        
+        return successful_cabinets, failed_ids
     
     def get_cabinet_statistics(self):
         """

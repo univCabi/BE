@@ -16,4 +16,8 @@ urlpatterns = [
     path('admin/change/status', views.CabinetAdminChangeStatusView.as_view(), name='admin_change_status'),
     path('admin/dashboard', views.CabinetDashboardView.as_view(), name='admin_dashboard'),
     path('status/search', views.CabinetStatusSearchView.as_view(), name='status'),
+
+    path('bookmark/add', views.CabinetBookmarkAddView.as_view(), name='bookmark_add'),
+    path('bookmark/remove', views.CabinetBookmarkRemoveView.as_view(), name='bookmark_remove'),
+    path('bookmark/list', views.CabinetBookmarkListView.as_view(), name='bookmark_list'),
 ]
