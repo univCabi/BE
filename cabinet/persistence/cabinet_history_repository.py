@@ -53,3 +53,11 @@ class CabinetHistoryRepository:
             cabinet_id=cabinet_id,
             ended_at=None
         ).first()
+    
+    def rent_cabinet_overdue(self, cabinet : object, user_id : int):
+        return cabinet_histories.objects.create(
+            user_id=user_id,
+            cabinet_id=cabinet,
+            expired_at=timezone.now(),
+            ended_at=timezone.now()
+        )
