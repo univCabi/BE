@@ -33,3 +33,19 @@ class CabinetReturnException(BadRequestError):
         self.failed_ids = failed_ids
         detail = f" (ID: {failed_ids})" if failed_ids else ""
         super().__init__(f"사물함 반납에 실패했습니다{detail}")
+
+
+class CabinetBookmarkAlreadyExistsException(ConflictError):
+    """북마크가 이미 존재하는 예외"""
+    error_code = "cabinet_bookmark_already_exists"
+    
+    def __init__(self, cabinet_id=None):
+        detail = f" (ID: {cabinet_id})" if cabinet_id else ""
+        super().__init__(f"이미 북마크가 존재합니다{detail}")
+class CabinetBookmarkNotFoundException(NotFoundError):
+    """북마크를 찾을 수 없는 예외"""
+    error_code = "cabinet_bookmark_not_found"
+    
+    def __init__(self, cabinet_id=None):
+        detail = f" (ID: {cabinet_id})" if cabinet_id else ""
+        super().__init__(f"북마크를 찾을 수 없습니다{detail}")

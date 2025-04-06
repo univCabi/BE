@@ -13,8 +13,8 @@ from drf_yasg.utils       import swagger_auto_schema
 from drf_yasg             import openapi
 
 from core.middleware.authentication import IsLoginUser, IsAdminUser
-from .serializers import GetProfileMeSerializer
-from .models import users
+from ..serializers import GetProfileMeSerializer
+from ..models import users
 from authn.models import authns
 from cabinet.models import buildings
 

@@ -6,6 +6,8 @@ from .CabinetAdminReturnSerializer import CabinetAdminReturnSerializer
 from .CabinetStatisticsSerializer import CabinetStatisticsSerializer
 from .CabinetStatusDetailSerializer import CabinetStatusDetailSerializer
 from .CabinetInfoSerializer import CabinetInfoSerializer
+from .CabinetBookmarkSerializer import CabinetBookmarkSerializer
+
 
 __all__ = [
     'CabinetDetailSerializer',
@@ -14,5 +16,6 @@ __all__ = [
     'CabinetSearchSerializer',
     'CabinetAdminReturnSerializer',
     'CabinetStatisticsSerializer',
-    'CabinetStatusDetailSerializer'
+    'CabinetStatusDetailSerializer',
+    'CabinetBookmarkSerializer'
 ]

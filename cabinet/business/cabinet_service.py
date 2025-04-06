@@ -2,6 +2,7 @@ from cabinet.persistence.cabinet_repository import CabinetRepository
 from cabinet.persistence.cabinet_history_repository import CabinetHistoryRepository
 
 from authn.business.authn_service import AuthnService
+from user.exceptions import UserNotFoundException
 
 authn_service = AuthnService()
 
@@ -54,6 +55,15 @@ class CabinetService :
     
     def return_cabinets_by_ids(self, cabinet_ids : list):
         return cabinet_repository.return_cabinets_by_ids(cabinet_ids)
+    
+    def assign_cabinet_to_user(self, cabinet_id : int, student_number : str, status : str):
+        # 사용자 정보 조회
+        user_auth_info = authn_service.get_authn_by_student_number(student_number)
+
+        if not user_auth_info:
+            raise UserNotFoundException(student_number)
+
+        return cabinet_repository.assign_cabinet_to_user(cabinet_id, user_auth_info, status)
     
     def change_cabinet_status_by_ids(self, cabinet_ids : list, new_status : str, reason : str):
         return cabinet_repository.change_cabinet_status_by_ids(cabinet_ids, new_status, reason)
