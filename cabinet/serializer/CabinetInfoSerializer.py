@@ -12,10 +12,10 @@ class CabinetInfoSerializer(serializers.ModelSerializer):
     cabinetYPos = serializers.IntegerField(source='cabinet_positions.cabinet_y_pos', read_only=True)
     cabinetNumber = serializers.IntegerField(source='cabinet_number', read_only=True)
     isRentAvailable = serializers.SerializerMethodField()
-
+    isFree = serializers.SerializerMethodField()
     class Meta:
         model = cabinets
-        fields = ['id', 'cabinetNumber', 'cabinetXPos', 'cabinetYPos', 'status', 'isVisible', 'username', 'isMine', 'isRentAvailable']
+        fields = ['id', 'cabinetNumber', 'cabinetXPos', 'cabinetYPos', 'status', 'isVisible', 'username', 'isMine', 'isRentAvailable', 'isFree']
 
     def get_isVisible(self, obj):
         return obj.user_id.is_visible if obj.user_id else False
@@ -69,3 +69,6 @@ class CabinetInfoSerializer(serializers.ModelSerializer):
             # 오류 발생 시 로그 기록 후 대여 불가능 반환
             print(f"Error in get_isRentAvailable: {str(e)}")
             return False
+        
+    def get_isFree(self, obj):
+       return obj.payable == 'FREE'
