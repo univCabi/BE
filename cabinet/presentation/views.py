@@ -607,7 +607,13 @@ class CabinetAdminChangeStatusView(APIView):
                             type=openapi.TYPE_ARRAY,
                             items=openapi.Schema(
                                 type=openapi.TYPE_OBJECT,
-                                properties=CabinetAdminReturnSerializer()
+                                properties={
+                                    'building': openapi.Schema(type=openapi.TYPE_STRING),
+                                    'floor': openapi.Schema(type=openapi.TYPE_INTEGER),
+                                    'cabinetNumber': openapi.Schema(type=openapi.TYPE_STRING),
+                                    'brokenDate': openapi.Schema(type=openapi.TYPE_STRING, nullable=True),
+                                    'userName': openapi.Schema(type=openapi.TYPE_STRING, nullable=True),
+                                }
                             )
                         ),
                         'errors': openapi.Schema(
@@ -921,7 +927,7 @@ class CabinetBookmarkListView(APIView):
         responses={
             200: openapi.Response(
                 description="즐겨찾기 조회 성공",
-                schema=CabinetSearchSerializer(many=True)
+                schema=CabinetBookmarkSerializer(many=True)
             ),
             404: openapi.Response(
                 description="즐겨찾기를 찾을 수 없음",
