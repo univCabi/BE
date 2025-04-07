@@ -24,6 +24,8 @@ class CabinetDetailSerializer(serializers.ModelSerializer):
     isRentAvailable = serializers.SerializerMethodField()
     expiredAt = serializers.SerializerMethodField()
 
+    isFree = serializers.SerializerMethodField()
+
     class Meta:
         model = cabinets
         fields = [
@@ -36,7 +38,8 @@ class CabinetDetailSerializer(serializers.ModelSerializer):
             'username',
             'isMine',
             'expiredAt',
-            'isRentAvailable'
+            'isRentAvailable',
+            'isFree',
         ]
 
     def get_isVisible(self, obj):
@@ -112,3 +115,7 @@ class CabinetDetailSerializer(serializers.ModelSerializer):
             # 오류 발생 시 로그 기록 후 대여 불가능 반환
             print(f"Error in get_isRentAvailable: {str(e)}")
             return False
+        
+
+    def get_isFree(self, obj):
+        return obj.payable == 'FREE'
