@@ -17,7 +17,9 @@ from cabinet.serializer import (CabinetDetailSerializer,
                                  CabinetAdminReturnSerializer,
                                  CabinetStatisticsSerializer,
                                  CabinetStatusDetailSerializer,
-                                 CabinetBookmarkSerializer)
+                                 CabinetBookmarkListSerializer,
+                                 CabinetBookmarkSerializer,
+                                 )
 
 
 from cabinet.dto import (CabinetInfoQueryParamDto,
@@ -852,7 +854,7 @@ class CabinetBookmarkAddView(APIView):
             200: openapi.Response(
                 description="즐겨찾기 추가 성공",
                 schema=openapi.Schema(type=openapi.TYPE_OBJECT, properties={
-                    'message': openapi.Schema(type=openapi.TYPE_STRING)
+                    'isBookmark' : openapi.Schema(type=openapi.TYPE_BOOLEAN),
                 })
             ),
             400: openapi.Response(
@@ -874,7 +876,7 @@ class CabinetBookmarkAddView(APIView):
 
         cabinet_bookmark_service.add_bookmark(cabinet_id=dto.validated_data.get('cabinetId'), student_number=request.user.student_number)
 
-        return Response({"message": "즐겨찾기에 추가되었습니다."}, status=status.HTTP_200_OK)
+        return Response({"isBookmark": True}, status=status.HTTP_200_OK)
     
 class CabinetBookmarkRemoveView(APIView):
     permission_classes = [IsAuthenticated]
@@ -893,7 +895,7 @@ class CabinetBookmarkRemoveView(APIView):
             200: openapi.Response(
                 description="즐겨찾기 삭제 성공",
                 schema=openapi.Schema(type=openapi.TYPE_OBJECT, properties={
-                    'message': openapi.Schema(type=openapi.TYPE_STRING)
+                    'isBookmark' : openapi.Schema(type=openapi.TYPE_BOOLEAN),
                 })
             ),
             400: openapi.Response(
@@ -915,7 +917,7 @@ class CabinetBookmarkRemoveView(APIView):
 
         cabinet_bookmark_service.remove_bookmark(cabinet_id=dto.validated_data.get('cabinetId'), student_number=request.user.student_number)
 
-        return Response({"message": "즐겨찾기가 삭제되었습니다."}, status=status.HTTP_200_OK)
+        return Response({"isBookmark": False}, status=status.HTTP_200_OK)
     
 
 class CabinetBookmarkListView(APIView):
@@ -927,7 +929,7 @@ class CabinetBookmarkListView(APIView):
         responses={
             200: openapi.Response(
                 description="즐겨찾기 조회 성공",
-                schema=CabinetBookmarkSerializer(many=True)
+                schema=CabinetBookmarkListSerializer(many=True)
             ),
             404: openapi.Response(
                 description="즐겨찾기를 찾을 수 없음",
@@ -940,6 +942,6 @@ class CabinetBookmarkListView(APIView):
     def get(self, request):
         bookmarks = cabinet_bookmark_service.get_bookmarks(student_number=request.user.student_number)
 
-        serializer = CabinetBookmarkSerializer(bookmarks, many=True)
+        serializer = CabinetBookmarkListSerializer(bookmarks, many=True)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
