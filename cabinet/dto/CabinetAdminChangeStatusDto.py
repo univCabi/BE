@@ -16,12 +16,14 @@ class CabinetAdminChangeStatusDto(BaseValidatedSerializer):
     reason = serializers.CharField(
         required=False,
         allow_blank=True,
+        allow_null=True,
         default=None,  # 기본값 설정
-        help_text='사물함 상태 변경 사유 (BROKEN 상태일 때 필수)'
+        help_text='사물함 상태 변경 사유 (BROKEN 상태일 때만 필수)'
     )
     studentNumber = serializers.CharField(
         required=False,
         allow_blank=True,
+        allow_null=True,
         default=None,  # 기본값 설정
         help_text='학생 학번 (USING, OVERDUE 상태일 때 필수)'
     )
@@ -41,10 +43,10 @@ class CabinetAdminChangeStatusDto(BaseValidatedSerializer):
     def validate(self, data):
         """
         각 상태에 따른 필수 필드 및 조건 검증:
-        1. AVAILABLE: 별다른 조건 없음
-        2. USING: studentNumber 필수, cabinetIds는 하나의 값만 가능
+        1. AVAILABLE: 별다른 조건 없음, reason 무시
+        2. USING: studentNumber 필수, cabinetIds는 하나의 값만 가능, reason 무시
         3. BROKEN: reason 필수
-        4. OVERDUE: studentNumber 필수, cabinetIds는 하나의 값만 가능
+        4. OVERDUE: studentNumber 필수, cabinetIds는 하나의 값만 가능, reason 무시
         """
         # cabinetIds와 newStatus가 동시에 존재하는지 검증 (공통)
         if not ('cabinetIds' in data and 'newStatus' in data):
@@ -59,6 +61,9 @@ class CabinetAdminChangeStatusDto(BaseValidatedSerializer):
             # cabinetIds에는 하나의 ID만 가능
             if len(data['cabinetIds']) > 1:
                 raise serializers.ValidationError(f"사물함 상태를 '{data['newStatus']}'으로 변경할 때는 하나의 사물함만 선택할 수 있습니다.")
+            
+            # reason 필드를 None으로 설정
+            data['reason'] = None
         
         elif data['newStatus'] == 'BROKEN':
             # reason 필수 체크
@@ -66,12 +71,12 @@ class CabinetAdminChangeStatusDto(BaseValidatedSerializer):
                 raise serializers.ValidationError("사물함 상태를 'BROKEN'으로 변경할 때는 reason 필드가 필수입니다.")
         
         # AVAILABLE 상태는 추가 검증 없음
-        # reason 값이 명시적으로 None이 되도록 설정
-        if data['newStatus'] == 'AVAILABLE':
+        elif data['newStatus'] == 'AVAILABLE':
+            # reason 값이 명시적으로 None이 되도록 설정
             data['reason'] = None
         
         return data
-    
+
     def to_internal_value(self, data):
         """
         입력 데이터를 내부 표현으로 변환하고, 누락된 필드에 기본값 설정
@@ -79,10 +84,10 @@ class CabinetAdminChangeStatusDto(BaseValidatedSerializer):
         # 일반적인 변환 수행
         validated_data = super().to_internal_value(data)
         
-        # newStatus가 AVAILABLE인 경우 reason을 None으로 설정
-        if validated_data.get('newStatus') == 'AVAILABLE':
+        # BROKEN이 아닌 다른 상태에서는 reason을 None으로 설정
+        if validated_data.get('newStatus') != 'BROKEN':
             validated_data['reason'] = None
-            
+                
         return validated_data
     
     @classmethod
