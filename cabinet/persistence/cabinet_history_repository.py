@@ -61,3 +61,4 @@ class CabinetHistoryRepository:
             expired_at=timezone.now(),
             ended_at=timezone.now()
         )
+    

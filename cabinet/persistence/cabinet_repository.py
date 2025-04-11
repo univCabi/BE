@@ -150,30 +150,54 @@ class CabinetRepository:
                     })
                     continue
                 
+                old_status = cabinet.status
+                old_user = cabinet.user_id
+                
                 # 상태 변경
                 cabinet.status = new_status
                 
-                # BROKEN 상태일 때는 사유 필드 업데이트
+                # 히스토리 처리
+                #current_history = cabinet_histories.objects.filter(
+                #    cabinet_id=cabinet,
+                #    ended_at__isnull=True
+                #).first()
+
+                current_history = cabinet_history_repository.get_cabinet_histories_by_cabinet_id(cabinet.id)
+                
+                # 상태별 처리
                 if new_status == "BROKEN":
                     cabinet.reason = reason
-                elif new_status == "AVAILABLE":
-                    # AVAILABLE 상태로 변경 시 사용자 정보 초기화 및 관련 히스토리 종료
-                    if cabinet.user_id:
-                        # 사용 중인 사물함 히스토리 종료
-                        #history = cabinet_histories.objects.filter(
-                        #    cabinet_id=cabinet,
-                        #    ended_at__isnull=True
-                        #).first()
+                    
+                    # 사용 중이었다면 히스토리 종료
+                    if current_history:
+                        current_history.ended_at = timezone.now()
+                        current_history.save()
                         
-                        #if history:
-                        #    history.ended_at = timezone.now()
-                        #    history.save()
-                        cabinet_history_repository.return_cabinet(cabinet, cabinet.user_id)
+                        # BROKEN 상태의 새 히스토리 추가 (필요시)
+                        # 관리자 조치로 인한 BROKEN 상태 기록
+                        # cabinet_histories.objects.create(
+                        #     user_id=old_user,  # 마지막 사용자 기록 유지 또는 None
+                        #     cabinet_id=cabinet,
+                        #     expired_at=timezone.now() + timezone.timedelta(days=0),  # 만료일 없음
+                        #     ended_at=None  # 수리될 때까지 열린 상태로 유지
+                        # )
+                    
+                elif new_status == "AVAILABLE":
+                    # 기존 히스토리 종료
+                    if current_history:
+                        current_history.ended_at = timezone.now()
+                        current_history.updated_at = timezone.now()
+                        current_history.save()
                     
                     # 사용자 정보 초기화
-                    cabinet.user_id = None
                     cabinet.reason = None
+                    cabinet.user_id = None
+                    
+                    # cabinet_history_repository를 통한 반납 처리
+                    if old_user:
+                        cabinet_history_repository.return_cabinet(cabinet, old_user)
                 
+                # 사물함 저장
                 cabinet.save()
                 successful_cabinets.append(cabinet)
                 
@@ -184,7 +208,7 @@ class CabinetRepository:
                 })
         
         return successful_cabinets, failed_ids
-    
+
     def assign_cabinet_to_user(self, cabinet_id, user_auth_info, status="USING"):
         """
         관리자용: 사물함을 특정 사용자에게 할당합니다.
@@ -300,27 +324,26 @@ class CabinetRepository:
                     'studentNumber': user.student_number if hasattr(user, 'student_number') else None,
                     'name': user.name if hasattr(user, 'name') else None
                 }
+            
+            # 상태별 추가 정보
+            if status_param == 'OVERDUE':
+                rental_history = cabinet_history_repository.get_cabinet_histories_by_cabinet_id(cabinet.id)
                 
-                # 연체된 경우 대여 시작일, 만료일 추가
-                if status_param == 'OVERDUE':
-                    #rental_history = cabinet_histories.objects.filter(
-                    #    cabinet_id=cabinet,
-                    #    ended_at=None
-                    #).first()
-
-                    rental_history = cabinet_history_repository.get_cabinet_histories_by_cabinet_id(cabinet.id)
-                    
-                    if rental_history:
-                        cabinet_data['rentalStartDate'] = rental_history.created_at
-                        cabinet_data['overDate'] = rental_history.expired_at
-                elif status_param == "BROKEN":
-                    # select_related를 사용하여 관련 객체까지 함께 로드
-                    rental_history = cabinet_history_repository.get_cabinet_histories_by_cabinet_id(cabinet.id)
-                    
-                    if rental_history:
-                        cabinet_data['rentalStartDate'] = rental_history.created_at
-                        cabinet_data['brokenDate'] = rental_history.cabinet_id.updated_at
+                if rental_history:
+                    cabinet_data['rentalStartDate'] = rental_history.created_at
+                    cabinet_data['overDate'] = rental_history.expired_at
+            
+            elif status_param == "BROKEN":
+                # BROKEN 상태일 때 날짜 처리 방식 수정
+                # 1. 먼저 현재 사용 중인 히스토리가 있는지 확인
+                current_history = cabinet_history_repository.get_cabinet_histories_by_cabinet_id(cabinet.id)
+                
+                if current_history:
+                    cabinet_data['rentalStartDate'] = current_history.created_at
+                
+                # 2. 항상 cabinet의 updated_at을 brokenDate로 사용 (BROKEN으로 상태가 변경된 시점)
+                cabinet_data['brokenDate'] = cabinet.updated_at
+            
             results.append(cabinet_data)
         
-        return results
-
+        return results    
