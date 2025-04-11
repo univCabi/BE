@@ -274,7 +274,7 @@ class CabinetRepository:
         ).select_related('building_id', 'user_id')
         
         if not cabinets_qs.exists():
-            raise CabinetNotFoundException(status=status_param)
+            raise CabinetNotFoundException()
         
         results = []
         for cabinet in cabinets_qs:
