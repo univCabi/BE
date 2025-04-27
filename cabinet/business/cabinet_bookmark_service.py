@@ -1,6 +1,6 @@
 
 from authn.business.authn_service import AuthnService
-from cabinet.exceptions import CabinetNotFoundException
+from cabinet.exceptions import CabinetBookmarkAlreadyExistsException, CabinetNotFoundException
 from cabinet.persistence.cabinet_bookmark_repository import CabinetBookmarkRepository
 from cabinet.persistence.cabinet_repository import CabinetRepository
 from user.exceptions import UserNotFoundException
@@ -23,6 +23,12 @@ class CabinetBookmarkService :
 
         if not cabinet_info:
             raise CabinetNotFoundException(cabinet_id=cabinet_id)
+        
+        existing_active_bookmark = cabinet_bookmark_repository.get_existing_active_bookmark(user_info=user_auth_info, cabinet_info=cabinet_info)
+
+        if existing_active_bookmark:
+            raise CabinetBookmarkAlreadyExistsException(cabinet_id=cabinet_info.id)
+        
 
         return cabinet_bookmark_repository.add_bookmark(user_info=user_auth_info, cabinet_info=cabinet_info)
     

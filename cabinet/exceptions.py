@@ -49,3 +49,29 @@ class CabinetBookmarkNotFoundException(NotFoundError):
     def __init__(self, cabinet_id=None):
         detail = f" (ID: {cabinet_id})" if cabinet_id else ""
         super().__init__(f"북마크를 찾을 수 없습니다{detail}")
+
+class CabinetStatusUpdateException(BadRequestError):
+    """사물함 상태 업데이트를 실패한 예외"""
+    error_code = "cabinet_status_update_failed"
+    
+    def __init__(self, cabinet_id=None):
+        detail = f" (ID: {cabinet_id})" if cabinet_id else ""
+        super().__init__(f"사물함 상태 업데이트에 실패했습니다{detail}")
+
+
+class CabinetRentFailedException(BadRequestError):
+    """사물함 대여를 실패한 예외"""
+    error_code = "cabinet_rent_failed"
+    
+    def __init__(self, cabinet_id=None):
+        detail = f" (ID: {cabinet_id})" if cabinet_id else ""
+        super().__init__(f"사물함 대여에 실패했습니다{detail}")
+
+
+class CabinetReturnFailedException(BadRequestError):
+    """사물함 반납을 실패한 예외"""
+    error_code = "cabinet_return_failed"
+    
+    def __init__(self, cabinet_id=None):
+        detail = f" (ID: {cabinet_id})" if cabinet_id else ""
+        super().__init__(f"사물함 반납에 실패했습니다{detail}")
