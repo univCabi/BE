@@ -1,9 +1,10 @@
 from django.utils import timezone
 from cabinet.models import cabinets
 from django.db.models import Count, Case, When
-from cabinet.exceptions import CabinetNotFoundException, CabinetAlreadyRentedException, UserHasRentalException, CabinetReturnException
+from cabinet.exceptions import CabinetNotFoundException, CabinetAlreadyRentedException, CabinetReturnFailedException, CabinetStatusUpdateException, UserHasRentalException, CabinetReturnException
 
 from cabinet.persistence.cabinet_history_repository import CabinetHistoryRepository
+from cabinet.type import CabinetStatusEnum
 
 cabinet_history_repository = CabinetHistoryRepository()
 
@@ -11,63 +12,43 @@ from cabinet.exceptions import CabinetNotFoundException, CabinetAlreadyRentedExc
 
 class CabinetRepository:
     def get_cabinets_by_building_ids(self, building_ids):
-        """
-        여러 건물 ID를 받아 해당하는 캐비넷 목록을 반환
-        """
-        cabinet_qs = cabinets.objects.filter(
+        return cabinets.objects.filter(
             building_id__in=building_ids
-        ).select_related('user_id', 'cabinet_positions')
-
-        if not cabinet_qs.exists():
-            raise CabinetNotFoundException(building_ids=building_ids)
-            
-        return cabinet_qs
+        ).select_related('user_id', 'cabinet_positions', 'building_id')
     
     def get_cabinet_by_id(self, cabinet_id : int):
-        cabinet = cabinets.objects.filter(id=cabinet_id).select_related('user_id', 'cabinet_positions').first()
+        return cabinets.objects.filter(id=cabinet_id).select_related('user_id', 'cabinet_positions', 'building_id').first()
 
-        if not cabinet:
-            raise CabinetNotFoundException(cabinet_id=cabinet_id)
-        return cabinet
-    
+    #TODO: 이력 조회를 위한 메소드로 변경함에 따라 이후 로직 변경
     def check_valid_rental(self, user_id : int, cabinet_id : int):
-        # 1. 사용자가 이미 다른 캐비넷을 대여했는지 확인
-        try :
-            if cabinet_history_repository.get_renting_cabinet_history_by_user_id(user_id) :
-                raise UserHasRentalException()
-        except CabinetNotFoundException:
-            pass
+        if cabinet_history_repository.get_renting_cabinet_history_by_user_id(user_id) is None :
+            raise UserHasRentalException()
 
-        # 2. 해당 캐비넷이 이미 대여 중인지 확인
-        try :
-            if cabinet_history_repository.get_renting_cabinet_history_by_cabinet_id(cabinet_id):
-                raise CabinetAlreadyRentedException(cabinet_id=cabinet_id)
-        except CabinetNotFoundException:
-            pass
+        if cabinet_history_repository.get_renting_cabinet_history_by_cabinet_id(cabinet_id) is not None :
+            raise CabinetAlreadyRentedException(cabinet_id=cabinet_id)
         
-        # 3. 캐비넷이 존재하는지 확인
-        cabinet = cabinets.objects.get(id=cabinet_id)
-        if not cabinet :
+        if self.get_cabinet_by_id(cabinet_id=cabinet_id) is None :
             raise CabinetNotFoundException(cabinet_id=cabinet_id)
-        return cabinet
-    
+
+    #TODO: 이력 조회를 위한 메소드로 변경함에 따라 이후 로직 변경
     def check_valid_return(self, user_id : int, cabinet_id : int):
         # 1. 사용자가 해당 캐비넷을 대여했는지 확인
-        if not cabinet_history_repository.get_using_cabinet_info(user_id=user_id, cabinet_id=cabinet_id):
-            raise UserHasRentalException(user_id=user_id)
+        if cabinet_history_repository.get_using_cabinet_info(user_id=user_id, cabinet_id=cabinet_id) is None:
+            raise UserHasRentalException()
         
-        # 2. 캐비넷이 존재하는지 확인
-        cabinet = cabinets.objects.get(id=cabinet_id)
-        if not cabinet :
+        if self.get_cabinet_by_id(cabinet_id=cabinet_id) is None :
             raise CabinetNotFoundException(cabinet_id=cabinet_id)
-        return cabinet
         
     def update_cabinet_status(self, cabinet_id : int, user_id : int, status : str):
-        return cabinets.objects.filter(id=cabinet_id).update(
+        result =  cabinets.objects.filter(id=cabinet_id).update(
             status=status, 
             user_id_id=user_id,
             updated_at=timezone.now()
         )
+
+        if not result:
+            raise CabinetStatusUpdateException(cabinet_id=cabinet_id)
+        return result
     
     def get_cabinets_exact_match_by_cabinet_number(self, cabinet_number : int):
         return cabinets.objects.filter(cabinet_number__exact=cabinet_number)
@@ -77,6 +58,7 @@ class CabinetRepository:
     
     def get_all_cabinets(self) :
         return cabinets.objects.all().order_by('id')
+
     
     def return_cabinets_by_ids(self, cabinet_ids: list):
         """
@@ -88,7 +70,9 @@ class CabinetRepository:
         for cabinet_id in cabinet_ids:
             try:
                 # 먼저 해당 ID의 캐비닛이 존재하는지 확인
-                cabinet = cabinets.objects.get(id=cabinet_id)
+                cabinet = self.get_cabinet_by_id(cabinet_id)
+                if not cabinet:
+                    raise CabinetNotFoundException(cabinet_id=cabinet_id)
                 
                 # USING 또는 OVERDUE 상태인지 확인
                 if cabinet.status not in ['USING', 'OVERDUE'] or not cabinet.user_id:
@@ -97,7 +81,7 @@ class CabinetRepository:
                         'reason': '반납 가능한 상태(USING 또는 OVERDUE)가 아닙니다'
                     })
                     continue
-                    
+                
                 # 활성 대여 이력 종료
                 cabinet_history_repository.return_cabinet(cabinet, cabinet.user_id)
             
@@ -105,9 +89,8 @@ class CabinetRepository:
                 updated = self.update_cabinet_status(cabinet_id, None, 'AVAILABLE')
                 
                 if updated:
-                    # 업데이트 후 최신 상태의 캐비닛 객체 가져오기
-                    updated_cabinet = cabinets.objects.select_related('building_id').get(id=cabinet_id)
-                    successful_cabinets.append(updated_cabinet)
+                    cabinet.refresh_from_db()
+                    successful_cabinets.append(cabinet)
                 else:
                     failed_ids.append({
                         'id': cabinet_id, 
@@ -140,8 +123,7 @@ class CabinetRepository:
         
         for cabinet_id in cabinet_ids:
             try:
-                # 사물함 조회
-                cabinet = cabinets.objects.filter(id=cabinet_id).first()
+                cabinet = self.get_cabinet_by_id(cabinet_id)
                 
                 if not cabinet:
                     failed_ids.append({
@@ -150,56 +132,12 @@ class CabinetRepository:
                     })
                     continue
                 
-                old_status = cabinet.status
-                old_user = cabinet.user_id
+                # 단일 사물함 상태 변경 처리
+                updated_cabinet = self.update_cabinet_status_with_history(
+                    cabinet, new_status, reason
+                )
                 
-                # 상태 변경
-                cabinet.status = new_status
-                
-                # 히스토리 처리
-                #current_history = cabinet_histories.objects.filter(
-                #    cabinet_id=cabinet,
-                #    ended_at__isnull=True
-                #).first()
-
-                current_history = cabinet_history_repository.get_cabinet_histories_by_cabinet_id(cabinet.id)
-                
-                # 상태별 처리
-                if new_status == "BROKEN":
-                    cabinet.reason = reason
-                    
-                    # 사용 중이었다면 히스토리 종료
-                    if current_history:
-                        current_history.ended_at = timezone.now()
-                        current_history.save()
-                        
-                        # BROKEN 상태의 새 히스토리 추가 (필요시)
-                        # 관리자 조치로 인한 BROKEN 상태 기록
-                        # cabinet_histories.objects.create(
-                        #     user_id=old_user,  # 마지막 사용자 기록 유지 또는 None
-                        #     cabinet_id=cabinet,
-                        #     expired_at=timezone.now() + timezone.timedelta(days=0),  # 만료일 없음
-                        #     ended_at=None  # 수리될 때까지 열린 상태로 유지
-                        # )
-                    
-                elif new_status == "AVAILABLE":
-                    # 기존 히스토리 종료
-                    if current_history:
-                        current_history.ended_at = timezone.now()
-                        current_history.updated_at = timezone.now()
-                        current_history.save()
-                    
-                    # 사용자 정보 초기화
-                    cabinet.reason = None
-                    cabinet.user_id = None
-                    
-                    # cabinet_history_repository를 통한 반납 처리
-                    if old_user:
-                        cabinet_history_repository.return_cabinet(cabinet, old_user)
-                
-                # 사물함 저장
-                cabinet.save()
-                successful_cabinets.append(cabinet)
+                successful_cabinets.append(updated_cabinet)
                 
             except Exception as e:
                 failed_ids.append({
@@ -208,6 +146,66 @@ class CabinetRepository:
                 })
         
         return successful_cabinets, failed_ids
+    
+    def update_cabinet_status_with_history(self, cabinet, new_status, reason=''):
+        # 상태별 처리 로직 분리 호출
+        if new_status == "BROKEN":
+            self.handle_broken_status(cabinet, reason)
+        elif new_status == "AVAILABLE":
+            self.handle_available_status(cabinet, cabinet.user_id)
+        
+        # DB 업데이트 (save 호출 대신 update 사용)
+        self.update_cabinet_status_and_reason(cabinet)
+        
+        return cabinet
+
+    def handle_broken_status(self, cabinet, reason):
+        current_history = cabinet_history_repository.get_cabinet_histories_by_cabinet_id(cabinet.id)
+        if current_history:
+            self.update_cabinet_history_ended(current_history)
+
+    def handle_available_status(self, cabinet, old_user):
+        current_history = cabinet_history_repository.get_cabinet_histories_by_cabinet_id(cabinet.id)
+        if current_history:
+            self.update_cabinet_history_ended(current_history)
+        
+        # 사용자 정보 초기화
+        cabinet.reason = None
+        cabinet.user_id = None
+        
+        # 사용자가 있었다면 반납 처리
+        if old_user:
+            try:
+                cabinet_history_repository.return_cabinet(cabinet, old_user)
+            except CabinetReturnFailedException:
+                # 이미 반납된 경우 무시 (히스토리에서 이미 처리됨)
+                pass
+
+    def update_cabinet_history_ended(self, history):
+        history.ended_at = timezone.now()
+        history.updated_at = timezone.now()
+        result = history.save(update_fields=['ended_at', 'updated_at'])
+
+        if not result:
+            raise CabinetReturnException(cabinet_id=history.cabinet_id.id)
+        return result
+
+    def update_cabinet_status_and_reason(self, cabinet):
+        """
+        캐비닛 변경사항 저장 (save 대신 update 사용)
+        """
+        # update 메소드 사용하여 DB 직접 업데이트
+        result = cabinets.objects.filter(id=cabinet.id).update(
+            status=cabinet.status,
+            reason=cabinet.reason,
+            user_id=cabinet.user_id,
+            updated_at=timezone.now()
+        )
+
+        if not result:
+            raise CabinetStatusUpdateException(cabinet_id=cabinet.id)
+        return result
+        
 
     def assign_cabinet_to_user(self, cabinet_id, user_auth_info, status="USING"):
         """
@@ -227,7 +225,7 @@ class CabinetRepository:
         
         try:
             # 사물함 조회
-            cabinet = cabinets.objects.filter(id=cabinet_id).first()
+            cabinet = self.get_cabinet_by_id(cabinet_id)
             
             if not cabinet:
                 failed_ids.append({
@@ -236,22 +234,9 @@ class CabinetRepository:
                 })
                 return successful_cabinets, failed_ids
             
-            user = user_auth_info.user_id
-            
-            # 사물함 상태 업데이트
-            cabinet.user_id = user
-            cabinet.status = status
-            cabinet.save()
-
-            # 상태에 따라 적절한 사물함 히스토리 생성
-            if status == "OVERDUE":
-                # OVERDUE 상태일 경우 현재 시간을 기준으로 ended_at과 expired_at 설정
-                cabinet_history_repository.rent_cabinet_overdue(cabinet, user)
-            else:
-                # 일반적인 대여 시에는 기존 메소드 사용
-                cabinet_history_repository.rent_cabinet(cabinet, user)
-            
-            successful_cabinets.append(cabinet)
+            # 사물함 할당 처리 로직 호출
+            updated_cabinet = self.assign_cabinet(cabinet, user_auth_info.user_id, status)
+            successful_cabinets.append(updated_cabinet)
             
         except Exception as e:
             failed_ids.append({
@@ -260,6 +245,73 @@ class CabinetRepository:
             })
         
         return successful_cabinets, failed_ids
+
+    def assign_cabinet(self, cabinet, user_id, status="USING"):
+        """
+        사물함을 사용자에게 할당하고 관련 히스토리를 생성합니다.
+        
+        Args:
+            cabinet: 할당할 사물함 객체
+            user_id: 할당 대상 사용자 ID
+            status: 변경할 상태 (USING 또는 OVERDUE)
+            
+        Returns:
+            업데이트된 사물함 객체
+        """
+        # 기존에 사용 중인 히스토리가 있는지 확인
+        current_history = cabinet_history_repository.get_cabinet_histories_by_cabinet_id(cabinet.id)
+        
+        # 사용 중인 기록이 있다면 종료 처리
+        if current_history:
+            self.update_cabinet_history_ended(current_history)
+        
+        # 사물함 정보 업데이트
+        self.update_cabinet_assignment(cabinet, user_id, status)
+        
+        # 상태에 따른 히스토리 생성
+        self.create_cabinet_history(cabinet, user_id, status)
+        
+        return cabinet
+
+    def update_cabinet_assignment(self, cabinet, user_id, status):
+        """
+        사물함 할당 정보를 업데이트합니다.
+        
+        Args:
+            cabinet: 업데이트할 사물함 객체
+            user_id: 할당 대상 사용자 ID
+            status: 변경할 상태
+        """
+        # 메모리 상의 객체 업데이트
+        cabinet.user_id = user_id
+        cabinet.status = status
+        
+        # DB 직접 업데이트 (save 대신 update 사용)
+        cabinets.objects.filter(id=cabinet.id).update(
+            user_id=user_id,
+            status=status,
+            reason=None,
+            updated_at=timezone.now()
+        )
+        
+        # 메모리 객체의 updated_at 필드도 업데이트
+        cabinet.updated_at = timezone.now()
+
+    def create_cabinet_history(self, cabinet, user_id, status):
+        """
+        상태에 따른 적절한 사물함 히스토리를 생성합니다.
+        
+        Args:
+            cabinet: 사물함 객체
+            user_id: 사용자 ID
+            status: 변경할 상태
+        """
+        if status == "OVERDUE":
+            # OVERDUE 상태일 경우 만료된 히스토리 생성
+            cabinet_history_repository.rent_cabinet_overdue(cabinet, user_id)
+        else:
+            # 일반적인 대여 히스토리 생성
+            cabinet_history_repository.rent_cabinet(cabinet, user_id)
     
     def get_cabinet_statistics(self):
         """
