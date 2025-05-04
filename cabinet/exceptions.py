@@ -75,3 +75,36 @@ class CabinetReturnFailedException(BadRequestError):
     def __init__(self, cabinet_id=None):
         detail = f" (ID: {cabinet_id})" if cabinet_id else ""
         super().__init__(f"사물함 반납에 실패했습니다{detail}")
+
+class CabinetNotRentedException(BadRequestError):
+    """사물함이 대여되지 않은 예외"""
+    error_code = "cabinet_not_rented"
+    
+    def __init__(self, cabinet_id=None):
+        detail = f" (ID: {cabinet_id})" if cabinet_id else ""
+        super().__init__(f"사물함이 대여되지 않았습니다{detail}")
+
+class CabinetAlreadyReturnedException(BadRequestError):
+    """사물함이 이미 반납된 예외"""
+    error_code = "cabinet_already_returned"
+    
+    def __init__(self, cabinet_id=None):
+        detail = f" (ID: {cabinet_id})" if cabinet_id else ""
+        super().__init__(f"사물함이 이미 반납되었습니다{detail}")
+
+class CabinetAlreadyRentedException(BadRequestError):
+    """사물함이 이미 대여된 예외"""
+    error_code = "cabinet_already_rented"
+    
+    def __init__(self, cabinet_id=None):
+        detail = f" (ID: {cabinet_id})" if cabinet_id else ""
+        super().__init__(f"사물함이 이미 대여되었습니다{detail}")
+
+
+class CabinetNotFoundException(BadRequestError):
+    """사물함을 찾을 수 없는 예외"""
+    error_code = "cabinet_not_found"
+    
+    def __init__(self, cabinet_id=None):
+        detail = f" (ID: {cabinet_id})" if cabinet_id else ""
+        super().__init__(f"사물함을 찾을 수 없습니다{detail}")

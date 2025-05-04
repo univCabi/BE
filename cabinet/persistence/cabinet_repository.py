@@ -1,7 +1,7 @@
 from django.utils import timezone
 from cabinet.models import cabinets
 from django.db.models import Count, Case, When
-from cabinet.exceptions import CabinetNotFoundException, CabinetAlreadyRentedException, CabinetReturnFailedException, CabinetStatusUpdateException, UserHasRentalException, CabinetReturnException
+from cabinet.exceptions import CabinetNotFoundException, CabinetAlreadyRentedException, CabinetNotRentedException, CabinetReturnFailedException, CabinetStatusUpdateException, UserHasRentalException, CabinetReturnException
 
 from cabinet.persistence.cabinet_history_repository import CabinetHistoryRepository
 from cabinet.type import CabinetStatusEnum
@@ -32,9 +32,9 @@ class CabinetRepository:
 
     #TODO: 이력 조회를 위한 메소드로 변경함에 따라 이후 로직 변경
     def check_valid_return(self, user_id : int, cabinet_id : int):
-        # 1. 사용자가 해당 캐비넷을 대여했는지 확인
+
         if cabinet_history_repository.get_using_cabinet_info(user_id=user_id, cabinet_id=cabinet_id) is None:
-            raise UserHasRentalException()
+            raise CabinetNotRentedException(cabinet_id=cabinet_id)
         
         if self.get_cabinet_by_id(cabinet_id=cabinet_id) is None :
             raise CabinetNotFoundException(cabinet_id=cabinet_id)
@@ -58,7 +58,6 @@ class CabinetRepository:
     
     def get_all_cabinets(self) :
         return cabinets.objects.all().order_by('id')
-
     
     def return_cabinets_by_ids(self, cabinet_ids: list):
         """
@@ -399,3 +398,9 @@ class CabinetRepository:
             results.append(cabinet_data)
         
         return results    
+
+    def get_cabinet_by_user_id(self, user_id):
+        """
+        특정 사용자가 대여한 사물함을 조회합니다.
+        """
+        return cabinets.objects.filter(user_id=user_id).first()

@@ -6,3 +6,10 @@ class GlobalDtoValidationException(ValidationError):
     
     def __init__(self, details):
         super().__init__("요청 파라미터를 확인해주세요", details=details)
+
+class GlobalRedisLockException(ConflictError):
+    """Redis Lock 예외"""
+    error_code = "redis_lock_error"
+    
+    def __init__(self, details):
+        super().__init__("Redis Lock을 획득하지 못했습니다", details=details)

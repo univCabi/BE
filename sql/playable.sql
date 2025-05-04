@@ -39,6 +39,3 @@ insert into cabinet_cabinet_histories (id, user_id_id, cabinet_id_id, created_at
 insert into cabinet_cabinet_histories (id, user_id_id, cabinet_id_id, created_at, expired_at, updated_at, ended_at) values (29, 2503, 60, '2024-06-15 00:00:00', '2025-06-15 00:00:00', '2024-06-15 00:00:00', '2025-06-15 00:00:00');
 insert into cabinet_cabinet_histories (id, user_id_id, cabinet_id_id, created_at, expired_at, updated_at, ended_at) values (30, 2503, 61, '2024-06-15 00:00:00', '2025-06-15 00:00:00', '2024-06-15 00:00:00', '2025-06-15 00:00:00');
 insert into cabinet_cabinet_histories (id, user_id_id, cabinet_id_id, created_at, expired_at, updated_at, ended_at) values (31, 2503, 62, '2024-06-15 00:00:00', '2025-06-15 00:00:00', '2024-06-15 00:00:00', null);
-
-update cabinet_cabinets set status="USING", user_id_id=2503 where id = 62;
-update cabinet_cabinets set status="USING", user_id_id=2501 where id = 61;
