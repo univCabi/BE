@@ -7,6 +7,7 @@ from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 import logging
 
+from cabinet.exceptions import CabinetAlreadyReturnedException, CabinetRentFailedException
 from core.util.pagination import paginate_data, CabinetPagination
 
 
@@ -210,12 +211,27 @@ class CabinetRentView(APIView):
     )
     def post(self, request):
         dto = CabinetRentDto.create_validated(data=request.data)
-
-        cabinet_service.rent_cabinet(cabinet_id=dto.validated_data.get('cabinetId'), student_number=request.user.student_number)
-
-        serializer = CabinetDetailSerializer(cabinet_service.get_cabinet_by_id(dto.validated_data.get('cabinetId')), context={'request': request})
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
+        
+        try:
+            # check_result=True로 비동기 결과 확인
+            result = cabinet_service.request_rent_cabinet(
+                cabinet_id=dto.validated_data.get('cabinetId'), 
+                student_number=request.user.student_number,
+                check_result=True
+            )
+            
+            # 성공 시 캐비넷 정보 반환
+            serializer = CabinetDetailSerializer(
+                cabinet_service.get_cabinet_by_id(dto.validated_data.get('cabinetId')), 
+                context={'request': request}
+            )
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except CabinetAlreadyReturnedException as e:
+            # 이미 다른 사물함을 대여 중인 경우
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except CabinetRentFailedException as e:
+            # 사물함이 이미 대여 중인 경우
+            return Response({"error": str(e)}, status=status.HTTP_409_CONFLICT)
 
 #TODO: isMine 필드 변경
 class CabinetReturnView(APIView):
@@ -941,6 +957,8 @@ class CabinetBookmarkListView(APIView):
     )
     def get(self, request):
         bookmarks = cabinet_bookmark_service.get_bookmarks(student_number=request.user.student_number)
+
+        print(f"bookmarks: {bookmarks}")
 
         serializer = CabinetBookmarkListSerializer(bookmarks, many=True)
 

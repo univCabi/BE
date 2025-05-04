@@ -17,7 +17,9 @@ import environ
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-env = environ.Env(DEBUG=(bool, True)) #환경변수를 불러올 수 있는 상태로 세팅
+env = environ.Env(
+    DEBUG=(bool, True)
+    ) #환경변수를 불러올 수 있는 상태로 세팅
 
 #환경변수 파일 읽어오기
 environ.Env.read_env(
@@ -223,3 +225,36 @@ LOGGING = {
 CORS_ALLOW_CREDENTIALS = True
 
 AUTH_USER_MODEL = 'authn.authns'
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    }
+}
+
+# Kafka settings
+KAFKA_BOOTSTRAP_SERVERS = 'localhost:9092'
+KAFKA_CABINET_RENTAL_TOPIC = 'cabinet-rental-requests'
+
+# Celery settings
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'Asia/Seoul'  # Adjust to your timezone
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
+
+# 중요: 태스크를 직접 지정
+CELERY_IMPORTS = ('cabinet.util.cabinet_celery_task',)
+
+# Task-specific settings
+CELERY_TASK_ROUTES = {
+    'cabinet.util.cabinet_celery_task.process_cabinet_rental': {'queue': 'cabinet_operations'},
+    # Removed the routes for return tasks
+}

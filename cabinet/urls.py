@@ -1,5 +1,5 @@
 from django.urls import path
-from .presentation import views
+from .presentation import views, admin_views
 
 urlpatterns = [
     path('', views.CabinetInfoView.as_view(), name='info'),
@@ -20,4 +20,6 @@ urlpatterns = [
     path('bookmark/add', views.CabinetBookmarkAddView.as_view(), name='bookmark_add'),
     path('bookmark/remove', views.CabinetBookmarkRemoveView.as_view(), name='bookmark_remove'),
     path('bookmark/list', views.CabinetBookmarkListView.as_view(), name='bookmark_list'),
+
+    path('monitor', admin_views.CabinetOperationsMonitorView.as_view(), name='monitor'),
 ]
