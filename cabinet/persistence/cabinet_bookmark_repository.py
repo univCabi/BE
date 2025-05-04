@@ -7,6 +7,7 @@ class CabinetBookmarkRepository:
 
     def get_existing_active_bookmark(self, user_info, cabinet_info):
         # 활성화된 북마크가 있는지 확인
+        print(f"get_existing_active_bookmark: {user_info.user_id}, {cabinet_info}")
         return cabinet_bookmarks.objects.filter(
             user_id=user_info.user_id,
             cabinet_id=cabinet_info,
