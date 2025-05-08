@@ -22,6 +22,7 @@ class CabinetConfig(AppConfig):
     def ready(self):
         # Start the thread pool when Django starts
         # Only in main process (not in forked processes like Celery workers)
+        import cabinet.signals
         import os
         if os.environ.get('RUN_MAIN', None) != 'true':
             from cabinet.util.cabinet_async_service_manager import AsyncServiceManager
