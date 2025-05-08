@@ -258,3 +258,11 @@ CELERY_TASK_ROUTES = {
     'cabinet.util.cabinet_celery_task.process_cabinet_rental': {'queue': 'cabinet_operations'},
     # Removed the routes for return tasks
 }
+
+# 블록체인 설정
+BLOCKCHAIN_DEV_MODE = False  # 개발 모드 활성화 (실제 블록체인 트랜잭션 없이 테스트)
+ETHEREUM_NODE_URL = 'https://sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID'  # 실제 배포 시 변경
+ETHEREUM_PRIVATE_KEY = 'YOUR_PRIVATE_KEY'  # 실제 배포 시 환경 변수로 관리
+CONTRACT_ADDRESS = '0x0000000000000000000000000000000000000000'  # 실제 배포 시 변경
+
+CONTRACT_ABI_PATH = os.path.join(BASE_DIR, 'blockchain/CabinetHistoryNFT.sol')

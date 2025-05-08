@@ -2,7 +2,8 @@ from django.utils import timezone
 from django.db import models
 from user.models import users, buildings
 
-from cabinet.type import (CabinetStatusEnum,
+from cabinet.type import (CabinetBlockChainStatusEnum,
+                          CabinetStatusEnum,
                           CabinetPayableEnum)
 
 #TODO: 반납기한에 대한 로직 추가
@@ -69,3 +70,4 @@ class cabinet_bookmarks(models.Model) :
 
     def __str__(self):
         return str(self.cabinet_id)
+    
